@@ -3,17 +3,17 @@ using namespace Crc;
 
 class Wheels {
   public:
-    #define CRC_WPM_1 fLPin;
-    #define CRC_PWM_2 fRPin;
-    #define CRC_PWM_3 bLPin;
-    #define CRC_PWM_4 bRPin;
+    byte fLPin;
+    byte fRPin;
+    byte bLPin;
+    byte bRPin;
 
-    #define ANALOG::JOYSTICK1_Y throBind;
-    #define ANALOG::JOYSTICK1_X turnBind;
-    #define ANALOG::JOYSTICK2_Y rotaBind
+    #define throBind ANALOG::JOYSTICK1_Y
+    #define sideBind ANALOG::JOYSTICK1_X
+    #define rotaBind ANALOG::JOYSTICK2_X
 
 
-    Wheels(int frontLeftPin, int frontRightPin, int backLeftPin, int backRightPin) {
+    Wheels(byte frontLeftPin, byte frontRightPin, byte backLeftPin, byte backRightPin) {
       fLPin = frontLeftPin;
       fRPin = frontRightPin;
       bLPin = backLeftPin;
@@ -25,7 +25,7 @@ class Wheels {
       CrcLib::InitializePwmOutput(bRPin);  
     }
 
-    Update() {
-      CrcLib::MoveHolonomic(throBind, turnBind, rotaBind, fLPin, bLPin, fRPin, bRPin);
+    void Update() {
+      CrcLib::MoveHolonomic(throBind, sideBind, rotaBind, fLPin, bLPin, fRPin, bRPin);
     }
 };

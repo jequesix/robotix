@@ -1,9 +1,9 @@
 class Time {
   private:
     unsigned long lastEvent;
-    bool lastState = false;
     unsigned int timeSinceEvent;
-
+    bool lastState = false;
+    
   public:
   unsigned int interval;
 
