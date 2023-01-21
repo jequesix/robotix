@@ -1,0 +1,12 @@
+#include <CrcLib.h>
+using namespace Crc;
+
+class Wheels {
+  private:
+    const int mFLPin;
+    const int mFRPin;
+    Wheels() : mFLPin(1), mFRPin(2)
+    {
+
+    }
+};
