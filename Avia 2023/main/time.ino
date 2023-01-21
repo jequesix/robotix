@@ -2,14 +2,15 @@ class Time {
   private:
     unsigned long lastEvent;
     unsigned int timeSinceEvent;
-    bool lastState = false;
+    unsigned int interval;
+
+    unsigned int currentState = 1;
+    unsigned int stateNum;
     
   public:
-  unsigned int interval;
+  
 
-  Time(int execInterval) {
-    interval = execInterval;
-  }
+  Time(int execInterval, int stateNumber = 0) : interval(execInterval), stateNum(stateNumber) {}
 
   bool singleState() {
     timeSinceEvent = millis() - lastEvent;
@@ -22,17 +23,14 @@ class Time {
     }
   }
   
-  bool doubleState() {
-    timeSinceEvent = millis() - lastEvent;
+  unsigned int cycleState() {
+    if (singleState() == true) {
+      currentState += 1;
+      if (currentState > stateNum) {
+        curentState = 1; }
 
-    if (timeSinceEvent >= interval) {
-      lastEvent = millis();
-      
-      if (lastState == false) {
-        return true;
-      } else {
-        return false;
-      }
+      return currentState;
     }
+
   }
 };
