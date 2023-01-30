@@ -10,10 +10,23 @@ class Commands {
     _pressed = false;
 
     bool isPressed(button) {
-      if (CrcLib::ReadDigitalChannel(button) == 0 && _pressed == false) {
-        return false;
+      if (CrcLib::ReadDigitalChannel(button) == 0) {
+        if (_pressed == false) {
+          return false;
+        } else if (_pressed == true) {
+          _pressed = false;
+          return false;
+        }        
+      } else if {CrcLib::ReadDigitalChannel(button) == 1) {
+         if (_pressed == true) {
+          return false;
+         } else if (_pressed == false) {
+          _pressed = true;
+          return true;
+         }
+          
       }
-      if (CrcLib::ReadDigitalChannel(button) == 1 && _pressed == false) {
+      if () {
         _pressed = true;
         return true;
       } else if (_pressed == true && CrcLib::ReadDigitalChannel(button) == 0) {
