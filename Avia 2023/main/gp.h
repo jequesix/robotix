@@ -7,11 +7,18 @@ using namespace Crc;
 
 class Commands {
   private:
-    Time buttonTime(1000);
+    _pressed = false;
 
     bool isPressed(button) {
-      if (CrcLib::ReadDigitalChannel(button) == 1 && buttonTime.singleState() == true) {
+      if (CrcLib::ReadDigitalChannel(button) == 0 && _pressed == false) {
+        return false;
+      }
+      if (CrcLib::ReadDigitalChannel(button) == 1 && _pressed == false) {
+        _pressed = true;
         return true;
+      } else if (_pressed == true && CrcLib::ReadDigitalChannel(button) == 0) {
+        _pressed = false;
+        return false;
       } else {
         return false;
       }
