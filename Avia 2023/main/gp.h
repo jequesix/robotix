@@ -77,7 +77,7 @@ class GPFlip: private Commands {
       if (_colScanned == false) {
         int cSState = CrcLib::GetAnalogInput(_colSPin);
 
-        switch(gpTime.cycleState(100, 3))
+        switch(cSTime.cycleState())
           case 2:
             _colValues[0] = cSState;
             break;
@@ -93,6 +93,8 @@ class GPFlip: private Commands {
         return 0;
       } else if (gpColVal >= _yellow - _colInterval && gpColVal <= _yellow + _colInterval) {
         return 1;
+      } else {
+        return 2;
       }
     }
 
@@ -115,6 +117,9 @@ class GPFlip: private Commands {
       }
 
     void Setup() {
+      Time cSTime(100, 3);
+      Time motorTime(2000, 3);
+      
       cSLed.begin();
       for (int led = 0; led < _colSLNum; led++) {
         cSLed.setPixelColor(led, 255, 255, 255);
@@ -140,7 +145,7 @@ class GPFlip: private Commands {
         }
       }
 
-      if (_mode = 0 && _lasSState == 0) {
+      if (_mode = 0 && _isGp == true) {
         switch(motorTime.cycleState())
           case 1:
             int gpColor = gpFindColor();
@@ -154,8 +159,11 @@ class GPFlip: private Commands {
             } else if (_tColor != gpColor) {
               gpFlip(_fliFPos);
             }
+            break;
           case 3:
             gpFlip(0);
+            _colScanned = false;
+            break;
       }
     }
 };
