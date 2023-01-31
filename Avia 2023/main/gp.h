@@ -62,11 +62,13 @@ class GPFlip: private Commands {
     const int _fliMPin2;
 
     const int _fliMSpeed;
+    const int _fliSMSpeed;
     const int _fliFPos;
     const int _fliSPos;
+    const int _fliInterval = 10;
 
 
-    void gpCapture(motorSpeed) {
+    void gpCapture(int motorSpeed) {
       CrcLib::SetPwmOutput(_entMPin, motorSpeed);
       CrcLib::SetPwmOutput(_forMPin, motorSpeed);
     }
@@ -94,10 +96,14 @@ class GPFlip: private Commands {
       }
     }
 
-    void gpFlip(motorSpeed) {
-      
-
-      
+    void gpFlip(int pos) {
+      if (flipper.read() < pos - _fliInterval) {
+        CrcLib::SetPwmOutput(_fliMCPin, _fliMSpeed);
+      } else if (flipper.read() > pos + _fliInterval) {
+        CrcLib::SetPwmOutput(_fliMCPin, _fliSMSpeed);
+      } else if (flipper.read() >= pos - _fliInterval && flipper.read() <= pos + _fliInterval) {
+        CrcLib::SetPwmOutput(_fliMCPin, 0);
+      }
     }
 
   public:
@@ -143,67 +149,21 @@ class GPFlip: private Commands {
           case 2:
             gpCapture(0);
 
-            if (_tColor != gpColor) {
-              gpFlip(_fliFPos, _fliMSpeed);
-            } else if (_tColor == gpColor) {
+            if (gpColor == 2 || _tColor == gpColor) {
               gpFlip(_fliSPos, _fliMSpeed);
+            } else if (_tColor != gpColor) {
+              gpFlip(_fliFPos);
             }
           case 3:
-            gpFlip(0, _fliMSpeed);
+            gpFlip(0);
       }
     }
 };
 
 class GPElevator: private Commands {
   private:
-    const int _lSPin;
-    const int _cSPin;
-    const int _fMPin;
-    const int _fPin;
-
-    int _
-
-    const int _tColor;
-    int _gpColor;
-
-    bool _fMTrigger;
-  public:
-    // teamColor: blue = 0, yellow = 1
-    GPColor(int laserSensorPin, int colorSensorPin, int forwardMotorPin, int teamColor) :
-      _lSPin(laserSensorPin), _cSPin(colorSensorPin), _fMPin(forwardMotorPin), _tColor(teamColor) 
-        {
-        Time motorTime(2000);
-        Encoder flipper(CRC_ENCO_A, CRC_ENCO_B);
-        }
-
-    void Setup() {
-      pinMode(_lSPin, INPUT);
-      pinMode(_cSPin, INPUT);
-      pinMode(_foMPin, OUTPUT);    
-    }
-
-    void Update() {
-      if (CrcLib::ReadDigitalChannel(mRecMBind) == 1) {
-        if (motorTime.singleState() == false) {
-          CrcLib::SetPwmOutput(mRecMPin, 50);
-        }     
-      }
-
-      switch(motorTime.cycleState())
-        case 1:
-          CrcLib::SetPwmOutput(_foMPin, 50);
-          break;
-        case 2:
-          int fPos = flipper.read();
-          if (fPos < 180) {
-            CrcLib::SetPwmOutput(_flMPin, 50)
-          } else {
-            CrcLib::SetPwmOutput(_flMPin, 0)
-          }
-
-      
-         
-      }
-      
-    }
-}
+    const int _eleMCPin;
+    const int _eleMPin1;
+    const int _eleMPin2;
+    
+};
