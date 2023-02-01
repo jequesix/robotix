@@ -220,21 +220,28 @@ class GPElevator: private Commands {
     const int _eleMPin2;
     const int _eleTSpeed;
     const int _eleASpeed;
-
-    int _accSpan;
+    const int _stepPos[5];
+    
+    int _maxAccSpan;
+    int _accSpan
     int _curSpeed;
-    int _prePos;
+    int _sarPos;
+    int _tarPos;
     int _curPos;
 
   public:
-    GPElevator(int motorControlPin, int motorPin1, int motorPin2, int targetSpeed, int accelerationSpeed) :
-      _eleMCPin(motorControlPin), _eleMPin1(motorPin1), _eleMPin2(motorPin2), _eleTSpeed(targetSpeed), _eleASpeed(accelerationSpeed)
+    GPElevator(int motorControlPin, int motorPin1, int motorPin2, int targetSpeed, int accelerationSpee, int stepPosition[5]) :
+      _eleMCPin(motorControlPin), _eleMPin1(motorPin1), _eleMPin2(motorPin2), _eleTSpeed(targetSpeed), _eleASpeed(accelerationSpeed), _stepPos(stepPosition)
       {
         Encoder elevator(_eleMPin1, _eleMPin2);
       }
 
     void Setup() {
       CrcLib::InitializePwmOutput(_eleMCPin);
-      _accSpan = _eleTSpeed * _eleASpeed;
+      _maxAccSpan = _eleTSpeed * _eleASpeed;
+    }
+
+    void Update() {
+      
     }
 };
