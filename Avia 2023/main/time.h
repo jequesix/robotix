@@ -14,13 +14,14 @@ class Time {
 
   void reset() {
     lastEvent = millis();
+    currentState = 1;
   }
   
   bool singleState() {
     timeSinceEvent = millis() - lastEvent;
 
     if (timeSinceEvent >= interval) {
-      reset();
+      lastEvent = millis();
       return true;
     } else {
       return false;
@@ -29,12 +30,12 @@ class Time {
   
   unsigned int cycleState() {
     if (singleState() == true) {
-      currentState += 1;
+      currentState++;
       if (currentState > stateNum) {
         curentState = 1; }
-
-      return currentState;
     }
+
+    return currentState;
 
   }
 };

@@ -8,69 +8,72 @@ using namespace Crc;
 
 class Commands {
   private:
+    const CrcUtility::BUTTON _eleUBind;
+    const CrcUtility::BUTTON _eleDBind;
+
     bool _pressed = false;
 
     bool isPressed(button) {
-      if (CrcLib::ReadDigitalChannel(button) == 0) {
-        if (_pressed == false) {
-          return false;
-        } else {
-          _pressed = false;
-          return false;
-        }        
-      } else if (CrcLib::ReadDigitalChannel(button) == 1) {
-         if (_pressed == true) {
-          return false;
-         } else {
-          _pressed = true;
-          return true;
-         }
+      switch (CrcLib::ReadDigitalChannel(button)) {
+        case 0:
+          if (_pressed == false) {
+            return false;
+          } else {
+            _pressed = false;
+            return false;
+          }
+        case 1:
+          if (_pressed == true) {
+            return false;
+          } else {
+            _pressed = true;
+            return true;
+          }     
+      }
 };
 
-class GPFlip: private Commands {
+class GPGround: private Commands {
   private:
     // 0 = auto, 1 = manual
     int _mode = 0;
     const CrcUtility::BUTTON _modeBind;
 
     // Capture component
-    const int _lasSPin;
-    bool _isGp;
-
     const int _entMPin;
-    const int _forMPin;
-
-    const CrcUtility::BUTTON _capBind;
-    const int _capMSpeed;
-    
-    // Flipper component
+    const int _lasSPin;
+    unsigned char _lasSState;
+    bool _isGp;
+    int _colSPin;
+    const int _colSLPin;
+    // Number of leds - 1
+    const int _colSLNum;
     // 0 = blue, 1 = yellow
     const int _tColor = 0;
     const int _blue = 500;
     const int _yellow = 200;
     const int _colInterval = 10;
-    int _colSPin;
-    const int _colSLPin;
-    // Number of leds - 1
-    int _colSLNum = 4;
-    int _colValues[2];
-    bool _colScanned = false;
-
-
+    const CrcUtility::BUTTON _capBind;
+    const CrcUtility::BUTTON _capRBind;
+    const int _capMSpeed;
+    
+    // Flipper component
     const int _fliMCPin;
     const int _fliMPin1;
     const int _fliMPin2;
-
     const int _fliMSpeed;
     const int _fliSMSpeed;
+    const int _fliNPos;
     const int _fliFPos;
     const int _fliSPos;
+    const CrcUtility::BUTTON _fliBind;
     const int _fliInterval = 10;
+
+
+
 
 
     void gpCapture(int motorSpeed) {
       CrcLib::SetPwmOutput(_entMPin, motorSpeed);
-      CrcLib::SetPwmOutput(_forMPin, motorSpeed);
     }
 
     void gpFindColor() {
@@ -86,9 +89,7 @@ class GPFlip: private Commands {
             gpColVal = (_colValues[0] + _colValues[1]) / 2
             _colScanned = true;
             break;
-      }
-      
-
+      }   
       if (gpColVal >= _blue - _colInterval && gpColVal <= _blue + _colInterval) {
         return 0;
       } else if (gpColVal >= _yellow - _colInterval && gpColVal <= _yellow + _colInterval) {
@@ -98,28 +99,43 @@ class GPFlip: private Commands {
       }
     }
 
-    void gpFlip(int pos) {
-      if (flipper.read() < pos - _fliInterval) {
-        CrcLib::SetPwmOutput(_fliMCPin, _fliMSpeed);
-      } else if (flipper.read() > pos + _fliInterval) {
-        CrcLib::SetPwmOutput(_fliMCPin, _fliSMSpeed);
-      } else if (flipper.read() >= pos - _fliInterval && flipper.read() <= pos + _fliInterval) {
+    void gpFlip(int pos, bool reverse) {
+      if (flipper.read() >= pos - _fliInterval && flipper.read() <= pos + _fliInterval) {
         CrcLib::SetPwmOutput(_fliMCPin, 0);
+        return;
       }
+
+      switch (reverse) {
+        case 0:
+          if (flipper.read() < pos - _fliInterval) {
+            CrcLib::SetPwmOutput(_fliMCPin, _fliMSpeed);
+          } else if (flipper.read() > pos + _fliInterval) {
+            CrcLib::SetPwmOutput(_fliMCPin, _fliSMSpeed*(-1));
+          }
+        case 1:
+          if (flipper.read() > pos + _fliInterval) {
+            CrcLib::SetPwmOutput(_fliMCPin, _fliMSpeed*(-1));
+          } else if (flipper.read() < pos - _fliInterval) {
+            CrcLib::SetPwmOutput(_fliMCPin, _fliSMSpeed);
+          }
+      }
+
     }
 
+
+
+
   public:
-    GPFlip(int teamColor, CrcUtility::BUTTON modeBinding, CrcUtility::BUTTON captureBinding, int laserSensorPin, int colorSensorPin,, int colorSensorLedPin, int entryMotorPin, int forwardMotorPin, int captureMotorsSpeed, int flipperMotorControlPin, int flipperMotorPin1, int flipperMotorPin2, int flipperMotorSpeed) : 
-      _tColor(teamColor), _modeBind(modeBinding), _capBind(captureBinding), _lasSPin(laserSensorPin), _colSPin(colorSensorPin), _colSLPin(colorSensorLedPin) _entMPin(entryMotorPin), _forMPin(forwardMotorPin), _capMSpeed(captureMotorsSpeed), _fliMCPin(flipperMotorControlPin), _fliMPin1(flipperMotorPin1), _fliMPin2(flipperMotorPin2), _fliMSpeed(flipperMotorSpeed) {
-        Time gpTime();
+    GPGround(int teamColor, CrcUtility::BUTTON modeBinding, CrcUtility::BUTTON captureBinding, int laserSensorPin, int colorSensorPin,, int colorSensorLedPin, int entryMotorPin, int forwardMotorPin, int captureMotorsSpeed, int flipperMotorControlPin, int flipperMotorPin1, int flipperMotorPin2, int flipperMotorSpeed) : 
+      _tColor(teamColor), _modeBind(modeBinding), _capBind(captureBinding), _lasSPin(laserSensorPin), _colSPin(colorSensorPin), _colSLPin(colorSensorLedPin) _entMPin(entryMotorPin), _forMPin(forwardMotorPin), _capMSpeed(captureMotorsSpeed), _fliMCPin(flipperMotorControlPin), _fliMPin1(flipperMotorPin1), _fliMPin2(flipperMotorPin2), _fliMSpeed(flipperMotorSpeed)
+      {
+        Time cSTime(100, 3);
+        Time motorTime(2000, 3);
         Encoder flipper(_fliMPin1, _fliMPin2);
         Adafruit_NeoPixel cSLed(5, _colSLPin, NEO_KHZ800);
       }
 
     void Setup() {
-      Time cSTime(100, 3);
-      Time motorTime(2000, 3);
-      
       cSLed.begin();
       for (int led = 0; led < _colSLNum; led++) {
         cSLed.setPixelColor(led, 255, 255, 255);
@@ -128,43 +144,72 @@ class GPFlip: private Commands {
 
       //Initialize Crc Functions
       CrcLib::InitializePwmOutput(_entMPin);
-      CrcLib::InitializePwmOutput(_forMPin);
     }
 
     void Update() {
-      lasSState = CrcLib::GetDigitalInput(_lasSPin);
-      if (lasSState == 0) {
-        _isGp = true;
-      }
-
       if (isPressed(_modeBind)) {
-        if (_mode == 0) {
-          _mode = 1;
-        } else if (_mode == 1) {
-          _mode = 0;
+        switch (_mode) {
+          case 0:
+            _mode = 1;
+          case 1:
+            _mode = 0;
         }
       }
 
-      if (_mode = 0 && _isGp == true) {
-        switch(motorTime.cycleState())
-          case 1:
-            int gpColor = gpFindColor();
-            gpCapture(_capMSpeed);
-            break;
-          case 2:
-            gpCapture(0);
+      switch (_mode)
+        case 0:
+          _lasSState = CrcLib::GetDigitalInput(_lasSPin);
+          if (_lasSState == LOW) {
+            _isGp = true;
+          }
 
-            if (gpColor == 2 || _tColor == gpColor) {
-              gpFlip(_fliSPos, _fliMSpeed);
-            } else if (_tColor != gpColor) {
-              gpFlip(_fliFPos);
+          if (_isGp) {
+            switch(motorTime.cycleState()) {
+              case 1:
+                int gpColor = gpFindColor();
+                gpCapture(_capMSpeed);
+                break;
+              case 2:
+                gpCapture(0);
+                if (gpColor == 2 || _tColor == gpColor) {
+                  gpFlip(_fliSPos);
+                } else if (_tColor != gpColor) {
+                  gpFlip(_fliFPos);
+                }
+                break;
+              case 3:
+                gpFlip(_fliNPos, 1);
+                _colScanned = false;
+                _isGp = false;
+                break;
             }
-            break;
-          case 3:
-            gpFlip(0);
-            _colScanned = false;
-            break;
-      }
+          }
+          
+        case 1:
+          if (CrcLib::ReadDigitalChannel(_capBind) == 0) {
+            switch (CrcLib::ReadDigitalChannel(_capRBind)) {
+              case 0:
+                gpCapture(0);
+              case 1:
+                gpCapture(_capMSpeed*(-1));
+            }
+          }
+
+          if (CrcLib::ReadDigitalChannel(_fliBind) == 1) {
+            _fliState++;
+            if (_fliState > 3) {
+              _fliState = 1;
+            }
+          }
+
+          switch (_fliState) {
+            case 1:
+              gpFlip(_fliNPos, 1);
+            case 2:
+              gpFlip(_fliFPos);
+            case 3:
+              gpFlip(_fliSPos, 1)
+          }
     }
 };
 
@@ -173,5 +218,23 @@ class GPElevator: private Commands {
     const int _eleMCPin;
     const int _eleMPin1;
     const int _eleMPin2;
-    
+    const int _eleTSpeed;
+    const int _eleASpeed;
+
+    int _accSpan;
+    int _curSpeed;
+    int _prePos;
+    int _curPos;
+
+  public:
+    GPElevator(int motorControlPin, int motorPin1, int motorPin2, int targetSpeed, int accelerationSpeed) :
+      _eleMCPin(motorControlPin), _eleMPin1(motorPin1), _eleMPin2(motorPin2), _eleTSpeed(targetSpeed), _eleASpeed(accelerationSpeed)
+      {
+        Encoder elevator(_eleMPin1, _eleMPin2);
+      }
+
+    void Setup() {
+      CrcLib::InitializePwmOutput(_eleMCPin);
+      _accSpan = _eleTSpeed * _eleASpeed;
+    }
 };
