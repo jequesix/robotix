@@ -219,8 +219,9 @@ class GPElevator: private Commands {
     const int _eleMPin1;
     const int _eleMPin2;
     const int _eleTSpeed;
-    const int _eleASpeed;
-    const int _stepPos[5];
+    const int _eleAGap;
+    const int _stepNum;
+    const int _stepPos[];
     
     int _maxAccSpan;
     int _accSpan
@@ -228,20 +229,46 @@ class GPElevator: private Commands {
     int _sarPos;
     int _tarPos;
     int _curPos;
+    int _curStep = 0;
+
+
+    void eleMove(int targetSpeed, bool reverse) {
+      int speedIncrement = 1;
+      if (reverse) {
+        targetSpeed = targetSpeed*(-1);
+        speedIncrement = speedIncrement*(-1);
+      }
+
+      
+    }
+
+
+
 
   public:
-    GPElevator(int motorControlPin, int motorPin1, int motorPin2, int targetSpeed, int accelerationSpee, int stepPosition[5]) :
-      _eleMCPin(motorControlPin), _eleMPin1(motorPin1), _eleMPin2(motorPin2), _eleTSpeed(targetSpeed), _eleASpeed(accelerationSpeed), _stepPos(stepPosition)
+    GPElevator(int motorControlPin, int motorPin1, int motorPin2, int targetSpeed, int accelerationGap, int stepNumber, int stepsPosition[]) :
+      _eleMCPin(motorControlPin), _eleMPin1(motorPin1), _eleMPin2(motorPin2), _eleTSpeed(targetSpeed), _eleAGap(accelerationGap), _stepNum(stepNumber), _stepPos(stepsPosition)
       {
         Encoder elevator(_eleMPin1, _eleMPin2);
       }
 
     void Setup() {
       CrcLib::InitializePwmOutput(_eleMCPin);
-      _maxAccSpan = _eleTSpeed * _eleASpeed;
+      _maxAccSpan = _eleTSpeed * _eleAGap;
     }
 
     void Update() {
-      
+      if (isPressed(_eleUBind)) {
+        if (_curStep < (_stepNum - 1)) {
+          _curStep++;
+        }
+      } else if (isPressed(_eleDBind)) {
+        if (_curStep > 0) {
+          _curStep--;
+        }
+      }
+
+      _tarPos = _stepPos[_curStep];
+      _staPos = elevator.read();
     }
 };

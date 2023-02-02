@@ -30,10 +30,11 @@ class Time {
   
   unsigned int cycleState() {
     if (singleState() == true) {
-      currentState++;
-      if (currentState > stateNum) {
-        curentState = 1; }
-    }
+      if (currentState < stateNum) {
+        currentState++;
+      } else {
+        curentState = 1;
+      }
 
     return currentState;
 
