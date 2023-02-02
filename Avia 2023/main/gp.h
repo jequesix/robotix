@@ -223,6 +223,7 @@ class GPElevator: private Commands {
     const int _stepNum;
     const int _stepPos[];
     
+    const int _speIncr = 1;
     int _maxAccSpan;
     int _accSpan
     int _curSpeed;
@@ -230,15 +231,17 @@ class GPElevator: private Commands {
     int _tarPos;
     int _curPos;
     int _curStep = 0;
+    int _dynSpeed;
+    int _dynAGap;
 
 
-    void eleMove(int targetSpeed, bool reverse) {
-      int speedIncrement = 1;
+    void eleMove(bool reverse) {
       if (reverse) {
         targetSpeed = targetSpeed*(-1);
         speedIncrement = speedIncrement*(-1);
       }
 
+      
       
     }
 
