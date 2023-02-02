@@ -11,6 +11,8 @@ class Commands {
     const CrcUtility::BUTTON _eleUBind;
     const CrcUtility::BUTTON _eleDBind;
 
+    const CrcUtility::BUTTON _graSBind;
+
     bool _pressed = false;
 
     bool isPressed(button) {
@@ -274,4 +276,29 @@ class GPElevator: private Commands {
       _tarPos = _stepPos[_curStep];
       _staPos = elevator.read();
     }
+};
+
+class Grabber: private Commands {
+  private:  
+    const int _ser1Pin;
+    const int _staPos1 = 0;
+    const int _openPos1 = 195;
+    const int _cloPos1 = 130;
+    const int _ser2Pin;
+    const int _staPos2 = 180;
+    const int _openPos2 = 5;
+    const int _cloPos2 = 60;
+
+    int _serStep = 1;
+
+   public:
+    void Setup() {
+      CrcLib::InitializePwmOutput(_ser1Pin);
+      CrcLib::InitializePwmOutput(_ser2Pin);
+    }
+
+    void Update()
+      if (isPressed(_graSBind) {
+        
+      }
 };
