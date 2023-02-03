@@ -303,10 +303,11 @@ class GPGrabber: private Commands {
     }
 
    public:
-    GPGrabber()
-    {
-      Time whlTime(_whlTimeInt);
-    }
+    GPGrabber(int servo1Pin, int servo2Pin, int servo1Positions[3], int servo2Positions[3], int wheelPin, int wheelSpeed, int wheelTimeInterval) :
+      _srv1Pin(servo1Pin), _srv2Pin(servo2Pin), _srv1Pos(servo1Positions), _srv2Pos(servo2Positions), _whlPin(wheelPin), _whlSpeed(wheelSpeed), _whlTimeInt(wheelTimeInterval)
+      {
+        Time whlTime(_whlTimeInt);
+      }
 
     void Setup() {
       CrcLib::InitializePwmOutput(_ser1Pin);
