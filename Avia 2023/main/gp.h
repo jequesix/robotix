@@ -11,7 +11,8 @@ class Commands {
     const CrcUtility::BUTTON _eleUBind;
     const CrcUtility::BUTTON _eleDBind;
 
-    const CrcUtility::BUTTON _graSBind;
+    const CrcUtility::BUTTON _graSrvBind;
+    const CrcUtility::BUTTON _graWhlBind;
 
     bool _pressed = false;
 
@@ -47,7 +48,6 @@ class GPGround: private Commands {
     bool _isGp;
     int _colSPin;
     const int _colSLPin;
-    // Number of leds - 1
     const int _colSLNum;
     // 0 = blue, 1 = yellow
     const int _tColor = 0;
@@ -134,12 +134,12 @@ class GPGround: private Commands {
         Time cSTime(100, 3);
         Time motorTime(2000, 3);
         Encoder flipper(_fliMPin1, _fliMPin2);
-        Adafruit_NeoPixel cSLed(5, _colSLPin, NEO_KHZ800);
+        Adafruit_NeoPixel cSLed(_colSLNum, _colSLPin, NEO_KHZ800);
       }
 
     void Setup() {
       cSLed.begin();
-      for (int led = 0; led < _colSLNum; led++) {
+      for (int led = 0; led < (_colSLNum -1); led++) {
         cSLed.setPixelColor(led, 255, 255, 255);
       }
       cSLed.show();
@@ -278,27 +278,66 @@ class GPElevator: private Commands {
     }
 };
 
-class Grabber: private Commands {
+class GPGrabber: private Commands {
   private:  
-    const int _ser1Pin;
-    const int _staPos1 = 0;
-    const int _openPos1 = 195;
-    const int _cloPos1 = 130;
-    const int _ser2Pin;
-    const int _staPos2 = 180;
-    const int _openPos2 = 5;
-    const int _cloPos2 = 60;
+    const int _srv1Pin;
+    const int _srv1Pos[3];
+    const int _srv2Pin;
+    const int _srv2Pos[3];
+    const int _whlPin;
+    const int _whlSpeed;
+    const int _whlTimeInt;
 
-    int _serStep = 1;
+    const int _stepNum = 3;
+    int _step = 0;
+    bool _isWhlSpin = false;
+
+
+    void srvMove() {
+      CrcLib::SetPwmOutput(_ser1Pin, _ser1Pos[_step]);
+      CrcLib::SetPwmOutput(_ser2Pin, _ser2Pos[_step]);
+    }
+
+    void whlSpin(whlSpeed) {
+      CrcLib::SetPwmOutput(_whlPin, whlSpeed);
+    }
 
    public:
+    GPGrabber()
+    {
+      Time whlTime(_whlTimeInt);
+    }
+
     void Setup() {
       CrcLib::InitializePwmOutput(_ser1Pin);
       CrcLib::InitializePwmOutput(_ser2Pin);
+      CrcLib::InitializePwmOutput(_whlPin);
     }
 
-    void Update()
-      if (isPressed(_graSBind) {
-        
+    void Update() {
+      if (isPressed(_graSrvBind) {
+        if (_step < (_stepNum - 1)) {
+          _step++;
+        } else {
+          _step = 0;
+        }
       }
+      srvMove();
+
+      switch (_isWhlSpin) {
+        case 0:
+          if (_graWhlBind == 1) {
+            _isWhlSpin = true;
+            whlTime.reset();
+          }
+        case 1:
+          switch (whlTime.singleState()) {
+            case 0:
+              whlSpin(_whlSpeed);
+            case 1:
+              whlSpin(0);
+              _isWhlSpin = false;
+          }
+      }
+    }
 };
