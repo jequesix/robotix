@@ -287,6 +287,7 @@ class GPGrabber: private Commands {
     const int _whlPin;
     const int _whlSpeed;
     const int _whlTimeInt;
+    cons t
 
     const int _stepNum = 3;
     int _step = 0;
@@ -316,29 +317,31 @@ class GPGrabber: private Commands {
     }
 
     void Update() {
-      if (isPressed(_graSrvBind) {
-        if (_step < (_stepNum - 1)) {
-          _step++;
-        } else {
-          _step = 0;
-        }
-      }
-      srvMove();
-
-      switch (_isWhlSpin) {
-        case 0:
-          if (_graWhlBind == 1) {
-            _isWhlSpin = true;
-            whlTime.reset();
+      switch (_mode) {
+          if (isPressed(_graSrvBind) {
+            if (_step < (_stepNum - 1)) {
+              _step++;
+            } else {
+              _step = 0;
+            }
           }
-        case 1:
-          switch (whlTime.singleState()) {
+          srvMove();
+    
+          switch (_isWhlSpin) {
             case 0:
-              whlSpin(_whlSpeed);
+              if (_graWhlBind == 1) {
+                _isWhlSpin = true;
+                whlTime.reset();
+              }
             case 1:
-              whlSpin(0);
-              _isWhlSpin = false;
+              switch (whlTime.singleState()) {
+                case 0:
+                  whlSpin(_whlSpeed);
+                case 1:
+                  whlSpin(0);
+                  _isWhlSpin = false;
+              }
           }
-      }
+       }
     }
 };
