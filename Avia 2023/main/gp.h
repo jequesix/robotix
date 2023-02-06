@@ -3,7 +3,7 @@
 #include <Adafruit_NeoPixel.h>
 #include "time.h"
 
-using namespace Crc;
+using namespace CrcLib::Crc;
 
 
 class Commands {
@@ -101,6 +101,7 @@ class GPGround: private Commands {
       }
     }
 
+// encoder version
     void gpFlip(int pos, bool reverse) {
       if (flipper.read() >= pos - _fliInterval && flipper.read() <= pos + _fliInterval) {
         CrcLib::SetPwmOutput(_fliMCPin, 0);
@@ -124,6 +125,12 @@ class GPGround: private Commands {
 
     }
 
+// servo version
+/*    void gpFlip(int pos) {
+        CrcLib::SetPwmOutput(_fliMCPin, pos)
+    } */
+
+
 
 
 
@@ -144,7 +151,6 @@ class GPGround: private Commands {
       }
       cSLed.show();
 
-      //Initialize Crc Functions
       CrcLib::InitializePwmOutput(_entMPin);
     }
 
@@ -161,7 +167,7 @@ class GPGround: private Commands {
       switch (_mode)
         case 0:
           _lasSState = CrcLib::GetDigitalInput(_lasSPin);
-          if (_lasSState == LOW) {
+          if (_lasSState == LOW && ) {
             _isGp = true;
           }
 
@@ -225,25 +231,24 @@ class GPElevator: private Commands {
     const int _stepNum;
     const int _stepPos[];
     
-    const int _speIncr = 1;
-    int _maxAccSpan;
-    int _accSpan
+    const int _spdIncr = 1;
+
+    int _curSpdIncr;
+    int _curTgtSpeed;
     int _curSpeed;
     int _sarPos;
     int _tarPos;
     int _curPos;
     int _curStep = 0;
-    int _dynSpeed;
-    int _dynAGap;
 
-
-    void eleMove(bool reverse) {
+    void elvMove(bool reverse) {
       if (reverse) {
-        targetSpeed = targetSpeed*(-1);
-        speedIncrement = speedIncrement*(-1);
+        _curTgtSpeed = _eleTSpeed*(-1);
+        _curSpdIncr = _spdIncr*(-1);
       }
 
-      
+    
+
       
     }
 
@@ -259,7 +264,7 @@ class GPElevator: private Commands {
 
     void Setup() {
       CrcLib::InitializePwmOutput(_eleMCPin);
-      _maxAccSpan = _eleTSpeed * _eleAGap;
+
     }
 
     void Update() {
@@ -275,6 +280,8 @@ class GPElevator: private Commands {
 
       _tarPos = _stepPos[_curStep];
       _staPos = elevator.read();
+
+
     }
 };
 
@@ -287,7 +294,6 @@ class GPGrabber: private Commands {
     const int _whlPin;
     const int _whlSpeed;
     const int _whlTimeInt;
-    cons t
 
     const int _stepNum = 3;
     int _step = 0;
@@ -299,7 +305,11 @@ class GPGrabber: private Commands {
       CrcLib::SetPwmOutput(_ser2Pin, _ser2Pos[_step]);
     }
 
-    void whlSpin(whlSpeed) {
+    void whlSpin(bool reverse, int whlSpeed) {
+      if (reverse) {
+        whlSpeed = whlSpeed*(-1)
+      }
+
       CrcLib::SetPwmOutput(_whlPin, whlSpeed);
     }
 
@@ -317,31 +327,29 @@ class GPGrabber: private Commands {
     }
 
     void Update() {
-      switch (_mode) {
-          if (isPressed(_graSrvBind) {
-            if (_step < (_stepNum - 1)) {
-              _step++;
-            } else {
-              _step = 0;
-            }
+      if (isPressed(_graSrvBind) {
+        if (_step < (_stepNum - 1)) {
+          _step++;
+        } else {
+          _step = 0;
+        }
+      }
+      srvMove();
+
+      switch (_isWhlSpin) {
+        case 0:
+          if (_graWhlBind == 1) {
+            _isWhlSpin = true;
+            whlTime.reset();
           }
-          srvMove();
-    
-          switch (_isWhlSpin) {
+        case 1:
+          switch (whlTime.singleState()) {
             case 0:
-              if (_graWhlBind == 1) {
-                _isWhlSpin = true;
-                whlTime.reset();
-              }
+              whlSpin(_whlSpeed);
             case 1:
-              switch (whlTime.singleState()) {
-                case 0:
-                  whlSpin(_whlSpeed);
-                case 1:
-                  whlSpin(0);
-                  _isWhlSpin = false;
-              }
+              whlSpin(0);
+              _isWhlSpin = false;
           }
-       }
+      }
     }
 };
