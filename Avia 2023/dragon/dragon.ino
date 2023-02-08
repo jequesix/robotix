@@ -120,5 +120,7 @@ void loop() {
 //    }
 //  }
 
-  manCtrl();
+  if (CrcLib::IsCommValid()) {
+    manCtrl();
+  }
 }
