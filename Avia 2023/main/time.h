@@ -33,10 +33,10 @@ class Time {
       if (currentState < stateNum) {
         currentState++;
       } else {
-        curentState = 1;
+        currentState = 1;
       }
 
     return currentState;
-
+    }
   }
 };
