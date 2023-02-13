@@ -116,6 +116,7 @@ class GPElevator {
     const uint8_t _eleMPin1;
     const uint8_t _eleMPin2;
     const int _eleTSpeed;
+    const int _spdCnst = 2;
     const int _stepNum;
     int *_stepPos;
     CommandButton _offButton;
@@ -177,6 +178,7 @@ class GPElevator {
       } else if (_posInt > (_expInt + 1)) {
         _curSpeed -= 1;
       }
+
       _lstPos = _curPos;
     }
     
@@ -193,20 +195,24 @@ class GPElevator {
     }
 
   public:
-    GPElevator(BUTTON offButton, BUTTON step1Button, BUTTON step2Button, BUTTON step3Button, BUTTON step4Button, BUTTON step5Button, BUTTON step6Button, BUTTON step7Button, int motorControlPin, uint8_t motorPin1, uint8_t motorPin2, int targetSpeed, int stepNumber, int stepsPosition[]) :
+    GPElevator(BUTTON offButton, BUTTON step1Button, BUTTON step2Button, BUTTON step3Button, BUTTON step4Button, BUTTON step5Button, BUTTON step6Button, BUTTON step7Button, int motorControlPin, uint8_t motorPin1, uint8_t motorPin2, int targetSpeed, int stepNumber,
+    int step1Position, int step2Position, int step3Position, int step4Position, int step5Position, int step6Position, int step7Position) :
     _offButton(offButton), _s1Button(step1Button), _s2Button(step2Button), _s3Button(step3Button), _s4Button(step4Button), _s5Button(step5Button), _s6Button(step6Button), _s7Button(step7Button), _eleMCPin(motorControlPin), _eleMPin1(motorPin1), _eleMPin2(motorPin2), _eleTSpeed(targetSpeed), _stepNum(stepNumber),
     spdTime(10), elevator(_eleMPin1, _eleMPin2)
       {
         _stepPos = new int[_stepNum];
-        for (int i = 0; i < _stepNum ; i++)
-        {
-          _stepPos[i] = stepsPosition[i];
-        }
+        _stepPos[0] = step1Position;
+        _stepPos[1] = step2Position;
+        _stepPos[2] = step3Position;
+        _stepPos[3] = step4Position;
+        _stepPos[4] = step5Position;
+        _stepPos[5] = step6Position;
+        _stepPos[6] = step7Position;
       }
 
     void Setup() {
       CrcLib::InitializePwmOutput(_eleMCPin);
-      _plsPrChk = 2 * _eleTSpeed;
+      _plsPrChk = _spdCnst * _eleTSpeed;
     }
 
     void Update() {
@@ -281,8 +287,8 @@ class GPGrabber {
     }
 
    public:
-    GPGrabber(CrcUtility::BUTTON graSrvBinding, CrcUtility::BUTTON _graWhlBind, int servo1Pin, int servo2Pin, int servo1Positions[3], int servo2Positions[3], int wheelPin, int wheelSpeed, int wheelTimeInterval) :
-      _graSrvButton(graSrvBinding), _graWhlButton(_graWhlBind), _whlTime(wheelTimeInterval), _srv1Pin(servo1Pin), _srv2Pin(servo2Pin), _whlPin(wheelPin), _whlSpeed(wheelSpeed)
+    GPGrabber(CrcUtility::BUTTON servoBinding, CrcUtility::BUTTON wheelBinding, int servo1Pin, int servo2Pin, int servo1Positions[3], int servo2Positions[3], int wheelPin, int wheelSpeed, int wheelTimeInterval) :
+      _graSrvButton(servoBinding), _graWhlButton(wheelBinding), _srv1Pin(servo1Pin), _srv2Pin(servo2Pin), _whlPin(wheelPin), _whlSpeed(wheelSpeed), _whlTime(wheelTimeInterval)
       {
         for (int i=0; i<3; i++)
         {
