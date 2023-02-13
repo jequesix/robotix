@@ -42,89 +42,83 @@ class CommandButton {
 class GPGround {
   private:
     // Capture component
-    const int _entMPin;
     const CrcUtility::ANALOG _capBind;
     const CrcUtility::ANALOG _capRBind;
+    const int _lftCptMPin;
+    const int _rgtCptMPin;
     const int _capMSpeed;
     const int _capMSSpeed;
     
     // Flipper component
-    const int _fliMCPin;
-    const int _fliMSpeed;
-    const int _fliSMSpeed;
-    const int _fliNPos;
-    const int _fliFPos;
-    const int _fliSPos;
-    int _fliState;
     const CrcUtility::BUTTON _fliNBind;
     const CrcUtility::BUTTON _fliFBind;
     const CrcUtility::BUTTON _fliSBind;
+    const int _fliSrvPin;
+    const int _fliNPos;
+    const int _fliFPos;
+    const int _fliSPos;
+
+    // Dynamic
+    int _capBindPos;
+
 
     void gpCapture(int motorSpeed) {
-      CrcLib::SetPwmOutput(_entMPin, motorSpeed);
+      CrcLib::SetPwmOutput(_lftCptMPin, motorSpeed);
+      CrcLib::SetPwmOutput(_rgtCptMPin, motorSpeed);
     }
 
     void gpFlip(int pos) {
-      CrcLib::SetPwmOutput(_fliMCPin, pos);
-      }
-
-
-
+      CrcLib::SetPwmOutput(_fliSrvPin, pos);
+    }
 
 
   public:
-    GPGround(ANALOG captureBinding, ANALOG reverseCaptureBinding, int entryMotorPin, int captureMotorsSpeed, int captureMotorsSlowSpeed, int flipperMotorPin) : 
-      _capBind(captureBinding), _capRBind(reverseCaptureBinding), _entMPin(entryMotorPin), _capMSpeed(captureMotorsSpeed), _capMSSpeed(captureMotorsSlowSpeed), _fliMCPin(flipperMotorPin)
-      {
-        _fliState = 0;
-      }
+    GPGround(ANALOG captureBinding, ANALOG captureReverseBinding, int leftCaptureMotorPin, int rightCaptureMotorPin, int captureMotorsSpeed, int captureMotorsSlowSpeed, 
+      BUTTON flipperNeutralBinding, BUTTON flipperFlipBinding, BUTTON flipperSkipBinding, int flipperServoPin, int flipperNeutralPosition, int flipperFlipPosition, int flipperSkipPosition) : 
+      _capBind(captureBinding), _capRBind(captureReverseBinding), _lftCptMPin(leftCaptureMotorPin), _rgtCptMPin(rightCaptureMotorPin), _capMSpeed(captureMotorsSpeed), _capMSSpeed(captureMotorsSlowSpeed), 
+      _fliNBind(flipperNeutralBinding), _fliFBind(flipperFlipBinding), _fliSBind(flipperSkipBinding), _fliSrvPin(flipperServoPin), _fliNPos(flipperNeutralPosition), _fliFPos(flipperFlipPosition), _fliSPos(flipperSkipPosition) {}
+
 
     void Setup() {
-      CrcLib::InitializePwmOutput(_entMPin);
+      CrcLib::InitializePwmOutput(_lftCptMPin);
+      CrcLib::InitializePwmOutput(_rgtCptMPin);
+      CrcLib::InitializePwmOutput(_fliSrvPin, 500, 2500);
+      CrcLib::SetPwmOutput(_fliSrvPin, _fliNPos);
     }
 
     void Update() {
+      _capBindPos = CrcLib::ReadAnalogChannel(_capBind);
+
       // Manual
-      if (CrcLib::ReadAnalogChannel(_capBind) >= -118 && CrcLib::ReadAnalogChannel(_capBind) < 0) {
+      if (_capBindPos >= -118 && _capBindPos < 5) {
         gpCapture(_capMSpeed);
-      } else if (CrcLib::ReadAnalogChannel(_capBind) >= 0) {
+      } else if (_capBindPos >= 5) {
         gpCapture(_capMSSpeed);
       } else if (CrcLib::ReadAnalogChannel(_capRBind) >= -118) {
         gpCapture(_capMSSpeed*(-1));
       }
 
-      if (CrcLib::ReadDigitalChannel(_fliFBind) == 1) {
-        _fliState = 1;
-      } else if (CrcLib::ReadDigitalChannel(_fliSBind) == 1) {
-        _fliState = 2;
+      if (CrcLib::ReadDigitalChannel(_fliSBind) == 1) {
+        gpFlip(_fliSPos);
+      } else if (CrcLib::ReadDigitalChannel(_fliFBind) == 1) {
+        gpFlip(_fliFPos);
       } else if (CrcLib::ReadDigitalChannel(_fliNBind) == 1) {
-        _fliState = 3;
-      }
-
-
-      switch (_fliState) {
-        case 1:
-          gpFlip(_fliNPos);
-        case 2:
-          gpFlip(_fliFPos);
-        case 3:
-          gpFlip(_fliSPos);
+        gpFlip(_fliNPos);
       }
     }
 };
 
 
-//--------------------------------------------------------------------
-//--------------------------------------------------------------------
+// Elevator
 class GPElevator {
   private:
     const int _eleMCPin;
     const uint8_t _eleMPin1;
     const uint8_t _eleMPin2;
     const int _eleTSpeed;
-    const int _eleAGap;
     const int _stepNum;
     int *_stepPos;
+    CommandButton _offButton;
     CommandButton _s1Button;
     CommandButton _s2Button;
     CommandButton _s3Button;
@@ -132,34 +126,76 @@ class GPElevator {
     CommandButton _s5Button;
     CommandButton _s6Button;
     CommandButton _s7Button;
-    
-    const int _spdIncr = 1;
 
-    int _curSpdIncr;
+    int _plsPrChk;
+
+    int _curPlsPrChk;
     int _curTgtSpeed;
     int _curSpeed;
     int _staPos;
+    int _lstPos;
     int _tarPos;
+    int _posInt;
+    int _expInt;
     int _curPos;
-    int _dynStep = 0;
+    int _step;
+    int _elvState;  // 0: Motor off, 1: Stay at position, 2: Moving
 
+    Time spdTime;
     Encoder elevator;
 
-    void elvMove(bool reverse = false) {
-      if (reverse) {
+
+    void setPos() {
+      _tarPos = _stepPos[_step];
+      _staPos = _curPos;
+
+      if (_tarPos > _staPos) {
+        _curTgtSpeed = _eleTSpeed;
+        _curPlsPrChk = _plsPrChk;
+      } else if (_tarPos < _staPos) {
         _curTgtSpeed = _eleTSpeed*(-1);
-        _curSpdIncr = _spdIncr*(-1);
+        _curPlsPrChk = _plsPrChk*(-1);
       }
-      if (1==1) {}
+
+      _elvState = 2;
     }
 
+    int elvSpeed() {
+      if (_elvState == 0) {
+        if (_elvState == 0 && _curPos < _stepPos[1])
+        _curSpeed = 0;
+        return;
+      } else if (_elvState == 1) {
+        _expInt = 0;
+      } else if (_elvState == 2) {
+        _expInt = _curPlsPrChk;
+      }
 
+      _posInt = _curPos - _lstPos;
+      if (_posInt < (_expInt - 1)) {
+        _curSpeed += 1;
+      } else if (_posInt > (_expInt + 1)) {
+        _curSpeed -= 1;
+      }
+      _lstPos = _curPos;
+    }
+    
+    void elvMove() {
+      if (_curPos <= (_tarPos + 5) && _curPos >= (_tarPos - 5)) {
+        _elvState = 1;
+      }
 
+      if (spdTime.singleState()) {
+        elvSpeed();
+      }
+
+      CrcLib::SetPwmOutput(_eleMCPin, _curSpeed);
+    }
 
   public:
-    GPElevator(BUTTON step1Button, BUTTON step2Button, BUTTON step3Button, BUTTON step4Button, BUTTON step5Button, BUTTON step6Button, BUTTON step7Button, int motorControlPin, uint8_t motorPin1, uint8_t motorPin2, int targetSpeed, int accelerationGap, int stepNumber, int stepsPosition[]) :
-    _s1Button(step1Button), _s2Button(step2Button), _s3Button(step3Button), _s4Button(step4Button), _s5Button(step5Button), _s6Button(step6Button), _s7Button(step7Button), _eleMCPin(motorControlPin), _eleMPin1(motorPin1), _eleMPin2(motorPin2), _eleTSpeed(targetSpeed), _eleAGap(accelerationGap), _stepNum(stepNumber),
-    elevator(_eleMPin1, _eleMPin2)
+    GPElevator(BUTTON offButton, BUTTON step1Button, BUTTON step2Button, BUTTON step3Button, BUTTON step4Button, BUTTON step5Button, BUTTON step6Button, BUTTON step7Button, int motorControlPin, uint8_t motorPin1, uint8_t motorPin2, int targetSpeed, int stepNumber, int stepsPosition[]) :
+    _offButton(offButton), _s1Button(step1Button), _s2Button(step2Button), _s3Button(step3Button), _s4Button(step4Button), _s5Button(step5Button), _s6Button(step6Button), _s7Button(step7Button), _eleMCPin(motorControlPin), _eleMPin1(motorPin1), _eleMPin2(motorPin2), _eleTSpeed(targetSpeed), _stepNum(stepNumber),
+    spdTime(10), elevator(_eleMPin1, _eleMPin2)
       {
         _stepPos = new int[_stepNum];
         for (int i = 0; i < _stepNum ; i++)
@@ -170,30 +206,38 @@ class GPElevator {
 
     void Setup() {
       CrcLib::InitializePwmOutput(_eleMCPin);
-
+      _plsPrChk = 2 * _eleTSpeed;
     }
 
     void Update() {
-      if(step1Button.wasClicked()) {
-        _dynStep = 0;
-      } else if (step2Button.wasClicked()) {
-        _dynStep = 1;
-      } else if (step3Button.wasClicked()) {
-        _dynStep = 2;
-      } else if (step4Button.wasClicked()) {
-        _dynStep = 3;
-      } else if (step5Button.wasClicked()) {
-        _dynStep = 4;
-      } else if (step6Button.wasClicked()) {
-        _dynStep = 5;
-      } else if (step7Button.wasClicked()) {
-        _dynStep = 6;
+      _curPos = elevator.read();
 
-      _tarPos = _stepPos[_dynStep];
-      _staPos = elevator.read();
+      if(_offButton.wasClicked()) {
+        _elvState = 0;
+      } else if (_s1Button.wasClicked()) {
+        _step = 0;
+        setPos();
+      } else if (_s2Button.wasClicked()) {
+        _step = 1;
+        setPos();
+      } else if (_s3Button.wasClicked()) {
+        _step = 2;
+        setPos();
+      } else if (_s4Button.wasClicked()) {
+        _step = 3;
+        setPos();
+      } else if (_s5Button.wasClicked()) {
+        _step = 4;
+        setPos();
+      } else if (_s6Button.wasClicked()) {
+        _step = 5;
+        setPos();
+      } else if (_s7Button.wasClicked()) {
+        _step = 6;
+        setPos();
+      }
 
-      if  
-        elvMove();
+      elvMove();
 
 
     }
