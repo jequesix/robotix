@@ -107,7 +107,7 @@ class GPElevator {
 
     void Setup() {
       CrcLib::InitializePwmOutput(_eleMCPin);
-      _plsPrChk = _spdCnst * _eleTSpeed;
+      _plsPrChk = 15;
     }
 
     void Update() {
@@ -158,7 +158,7 @@ class GPElevator {
     Binding _s6Button;
     Binding _s7Button;
 
-    int _plsPrChk;
+    double _plsPrChk;
 
     int _curPlsPrChk;
     int _curTgtSpeed;
