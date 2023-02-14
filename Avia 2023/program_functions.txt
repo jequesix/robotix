@@ -1,4 +1,0 @@
-1: Passer par light sensor + laser sensor
-2: Led correspond à couleur GP
-3: Flipper ou skipper (laser pour détecter si pièce prête à flipper) (lumière mauve si flipper)
-4: Laser voir si arrivé à ascenseur
