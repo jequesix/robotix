@@ -7,8 +7,8 @@ using namespace Crc;
 struct sdeSrv {
   const int pin = CRC_PWM_9;
   const ANALOG bind = ANALOG::JOYSTICK2_X;
-  const int uprLmt = 20;
-  const int lwrLmt = -20;
+  const int uprLmt = 127;
+  const int lwrLmt = -128;
   int bindPos;
   int pos;
   int dir;
@@ -20,8 +20,8 @@ Time sdeTime(30);
 struct rtnSrv {
   const int pin = CRC_PWM_10;
   const ANALOG bind = ANALOG::JOYSTICK2_Y;
-  const int uprLmt = 20;
-  const int lwrLmt = -20;
+  const int uprLmt = 127;
+  const int lwrLmt = -128;
   int bindPos;
   int pos;
   int dir; 
@@ -31,10 +31,10 @@ Time rtnTime(30);
 
 // mouth servo variables
 struct mthSrv {
-  const int pin = CRC_PWM_12;
+  const int pin = CRC_PWM_11;
   const ANALOG bind = ANALOG::JOYSTICK1_Y;
-  const int uprLmt = 20;
-  const int lwrLmt = -20;
+  const int uprLmt = 127;
+  const int lwrLmt = -128;
   int bindPos;
   int pos;
 };
@@ -46,17 +46,11 @@ struct wngMtr {
   const int pin = CRC_PWM_4;
   const ANALOG upBind = ANALOG::GACHETTE_R;
   const ANALOG dnBind = ANALOG::GACHETTE_L;
-  const int uprLmt = 20;
-  const int lwrLmt = -20;
   const int speed = 50;
   int upBindPos;
   int dnBindPos;
 };
 struct wngMtr wng;
-
-// mode (automatic/manual)
-//const BUTTON modBind = BUTTON::COLORS_DOWN;
-//bool mode;
 
 
 void manCtrl() {
@@ -72,7 +66,7 @@ void manCtrl() {
     } else if (sde.bindPos <= -10 && sde.pos > sde.lwrLmt) {
       sde.pos--;
     }
-    CrcLib::SetPwmOutput(CRC_PWM_12, sde.pos);
+    CrcLib::SetPwmOutput(sde.pin, sde.pos);
   }
 
   if (rtnTime.singleState()) {
@@ -81,7 +75,7 @@ void manCtrl() {
     } else if (rtn.bindPos <= -10 && rtn.pos > sde.lwrLmt) {
       rtn.pos--;
     }
-    CrcLib::SetPwmOutput(CRC_PWM_10, rtn.pos);
+    CrcLib::SetPwmOutput(rtn.pin, rtn.pos);
   }
 
   if (mthTime.singleState()) {
@@ -90,8 +84,7 @@ void manCtrl() {
     } else if (mth.bindPos <= -10 && mth.pos > sde.lwrLmt) {
       mth.pos--;
     }
-    CrcLib::SetPwmOutput(CRC_PWM_9, mth.pos);
-    Serial.println(mth.pos);
+    CrcLib::SetPwmOutput(mth.pin, mth.pos);
   }
 
   if (wng.upBindPos < 10 && wng.dnBindPos < 10) {
@@ -107,28 +100,19 @@ void manCtrl() {
 void setup() {
   CrcLib::Initialize();
 
-  CrcLib::InitializePwmOutput(sde.pin);
-  CrcLib::InitializePwmOutput(rtn.pin);
-  CrcLib::InitializePwmOutput(mth.pin);
+  CrcLib::InitializePwmOutput(sde.pin, 500, 2500);
+  CrcLib::InitializePwmOutput(rtn.pin, 500, 2500);
+  CrcLib::InitializePwmOutput(mth.pin, 500, 2500);
   CrcLib::InitializePwmOutput(wng.pin);
 
   CrcLib::SetPwmOutput(sde.pin, 0);
   CrcLib::SetPwmOutput(rtn.pin, 0);
   CrcLib::SetPwmOutput(mth.pin, 0);
-
-  Serial.begin(9600);
 }
+
 
 void loop() {
   CrcLib::Update();
-
-//  if (CrcLib::ReadDigitalChannel(modBind)) {
-//    if (!mode) {
-//      mode = true;
-//    } else {
-//      mode = false;
-//    }
-//  }
 
   if (CrcLib::IsCommValid()) {
     manCtrl();
