@@ -7,6 +7,57 @@
 using namespace Crc;
 
 
+//=============================================================================================
+//====================================== Indicator ============================================
+//=============================================================================================
+class Indicator {
+  public:
+    Indicator(int stripPin, int teamColor) : _strpPin(stripPin), _tmClr(teamColor)
+      {
+        Adafruit_NeoPixel strip(_ldCnt, stripPin, NEO_GRB + NEO_KHZ800);
+        strip.begin();
+
+        yellow = strip.Color(255, 255, 0);
+        red = strip.Color(255, 0, 0);
+        green = strip.Color(0, 255, 0);
+        blue = strip.Color(0, 0, 255);
+      }
+
+    void teamColor() {
+      if (_tmClr == 0) {
+        strip.fill(blue, 0);
+      } else if (_tmClr == 1) {
+        strip.fill(yellow, 0);
+      }
+    }
+
+    void working() {
+      strip.fill(red, 0);
+    }
+
+    void ready() {
+      strip.fill(green, 0);
+    }
+
+    void color(byte r, byte g, byte b) {
+      int clr = strip.Color(r, g, b);
+      strip.fill(clr, 0);
+    }
+
+  private:
+    const int _strpPin;
+    const int _tmClr;
+    const int _ldCnt = 50;
+
+    Adafruit_NeoPixel strip;
+
+    int yellow;
+    int red;
+    int green;
+    int blue;
+};
+
+
 
 
 
@@ -15,69 +66,155 @@ using namespace Crc;
 //=============================================================================================
 class GPGround {
   public:
-    GPGround(ANALOG captureBinding, ANALOG captureReverseBinding, int leftCaptureMotorPin, int rightCaptureMotorPin, int captureMotorsSpeed, int captureMotorsSlowSpeed, 
-      BUTTON flipperNeutralBinding, BUTTON flipperFlipBinding, BUTTON flipperSkipBinding, int flipperServoPin, int flipperNeutralPosition, int flipperFlipPosition, int flipperSkipPosition) : 
-      _capBind(captureBinding), _capRBind(captureReverseBinding), _lftCptMPin(leftCaptureMotorPin), _rgtCptMPin(rightCaptureMotorPin), _capMSpeed(captureMotorsSpeed), _capMSSpeed(captureMotorsSlowSpeed), 
-      _fliNBind(flipperNeutralBinding), _fliFBind(flipperFlipBinding), _fliSBind(flipperSkipBinding), _fliSrvPin(flipperServoPin), _fliNPos(flipperNeutralPosition), _fliFPos(flipperFlipPosition), _fliSPos(flipperSkipPosition) {}
+    struct config {
+      ANALOG captureBinding;
+      int leftCaptureMotorPin;
+      int rightCaptureMotorPin;
+      int captureMotorsSpeed;
+      int captureMotorsSlowSpeed;
+      int colorSensorPin;
+      int teamColor;
+      int captureLaserSensorPin;
+      BUTTON flipperNeutralBinding;
+      BUTTON flipperFlipBinding;
+      BUTTON flipperSkipBinding;
+      int flipperLaserSensorPin;
+      int flipperServoPin;
+      int flipperNeutralPosition;
+      int flipperFlipPosition;
+      int flipperSkipPosition;
+      int flipSpeed;
+      int skipSpeed;
+    };
 
-
-    void Setup() {
-      CrcLib::InitializePwmOutput(_lftCptMPin);
-      CrcLib::InitializePwmOutput(_rgtCptMPin);
-      CrcLib::InitializePwmOutput(_fliSrvPin, 500, 2500);
-      CrcLib::SetPwmOutput(_fliSrvPin, _fliNPos);
-    }
-
-    void Update() {
-      _capBindPos = CrcLib::ReadAnalogChannel(_capBind);
-
-      // Manual
-      if (_capBindPos >= -118 && _capBindPos < 5) {
-        gpCapture(_capMSpeed);
-      } else if (_capBindPos >= 5) {
-        gpCapture(_capMSSpeed);
-      } else if (CrcLib::ReadAnalogChannel(_capRBind) >= -118) {
-        gpCapture(_capMSSpeed*(-1));
+    GPGround(config &conf) : _capBind(conf.captureBinding), _lftCptMPin(conf.leftCaptureMotorPin), _rgtCptMPin(conf.rightCaptureMotorPin), _capMSpeed(conf.captureMotorsSpeed), _capMSSpeed(conf.captureMotorsSlowSpeed), _clrSPin(conf.colorSensorPin), _tmClr(conf.teamColor), _capLSPin(conf.captureLaserSensorPin), _fliLSPin(conf.flipperLaserSensorPin), _fliNBind(conf.flipperNeutralBinding), _fliFBind(conf.flipperFlipBinding), _fliSBind(conf.flipperSkipBinding), _fliSrvPin(conf.flipperServoPin), _fliNPos(conf.flipperNeutralPosition), _fliFPos(conf.flipperFlipPosition), _fliSPos(conf.flipperSkipPosition),
+      fliTime(1000), ind(CRC_PWM_12, conf.teamColor)
+      {
+        CrcLib::InitializePwmOutput(_lftCptMPin);
+        CrcLib::InitializePwmOutput(_rgtCptMPin);
+        CrcLib::InitializePwmOutput(_fliSrvPin, 500, 2500);
+        CrcLib::SetPwmOutput(_fliSrvPin, _fliNPos);
       }
 
+    void Update() {
+      if (CrcLib::GetAnalogInput(_capLSPin) < _lasLgtVal) {
+        _gp = true;
+      }
+
+      _capBindPos = CrcLib::ReadAnalogChannel(_capBind);
+
+      if (_capBindPos >= -118 && _capBindPos < 5) {
+        _capSpeed = _capMSpeed;
+      } else if (_capBindPos >= 5) {
+        _capSpeed = _capMSSpeed;
+      }
+      gpCapture();
+
       if (_fliSBind.isPressed()) {
-        gpFlip(_fliSPos);
+        _fliPos = _fliSPos;
       } else if (_fliFBind.isPressed()) {
-        gpFlip(_fliFPos);
+        _fliPos = _fliFPos;
       } else if (_fliNBind.isPressed()) {
-        gpFlip(_fliNPos);
+        _fliPos = _fliNPos;
+      }
+      gpFlip();
+
+      if (_gp) {
+        gpColor();
       }
     }
 
   private:
+    Indicator ind;
     // Capture component
     const CrcUtility::ANALOG _capBind;
-    const CrcUtility::ANALOG _capRBind;
     const int _lftCptMPin;
     const int _rgtCptMPin;
+    const int _clrSPin;
+    const int _capLSPin;
     const int _capMSpeed;
     const int _capMSSpeed;
-    
+    const int _tmClr;
+    const int _blueClrVal = 40;
+    const int _yellowClrVal = 110;
+   
     // Flipper component
     Binding _fliNBind;
     Binding _fliFBind;
     Binding _fliSBind;
     const int _fliSrvPin;
+    const int _fliLSPin;
     const int _fliNPos;
     const int _fliFPos;
     const int _fliSPos;
+    const int _lasLgtVal = 200;
+    Time fliTime;
 
     // Dynamic
     int _capBindPos;
+    int _capSpeed;
+    bool _clrFnd;
+    int _clrVal;
+    int _gpClr;  // 0 = blue, 1 = yellow
+    int _fliPos; // npos, fpos, spos
+    bool _fliRdy;
+    bool _fliTimeReset;
+    bool _gp;
 
 
-    void gpCapture(int motorSpeed) {
-      CrcLib::SetPwmOutput(_lftCptMPin, motorSpeed);
-      CrcLib::SetPwmOutput(_rgtCptMPin, motorSpeed);
+    void gpCapture() {
+      CrcLib::SetPwmOutput(_lftCptMPin, _capSpeed);
+      CrcLib::SetPwmOutput(_rgtCptMPin, _capSpeed);
+
+      if (!_clrFnd) {
+        if (CrcLib::GetAnalogInput(_capLSPin) < _lasLgtVal) {
+          ind.working();
+        }
+      } else if (_fliRdy) {
+          if (_fliPos == _fliNPos) {
+            CrcLib::SetPwmOutput(_lftCptMPin, 40);
+            CrcLib::SetPwmOutput(_rgtCptMPin, 40);
+          } else if (_fliPos == _fliSPos) {
+            CrcLib::SetPwmOutput(_lftCptMPin, 80);
+            CrcLib::SetPwmOutput(_rgtCptMPin, 80);        
+          }
+          _fliRdy = false;
+          _clrFnd = false;
+          _gp = false;
+      }
     }
 
-    void gpFlip(int pos) {
-      CrcLib::SetPwmOutput(_fliSrvPin, pos);
+    void gpColor() {
+      _clrVal = CrcLib::GetAnalogInput(_clrSPin);
+
+      if (_clrVal >= (_blueClrVal - 10) && _clrVal <= (_blueClrVal + 10)) {
+        _gpClr = 0;
+      } else if (_clrVal >= (_yellowClrVal - 10) && _clrVal <= (_yellowClrVal + 10)) {
+        _gpClr = 1;
+      } else {
+        _gpClr = 2;
+      }
+
+      if (_gpClr == _tmClr || _gpClr == 2) {
+        _fliPos = _fliSPos;
+      } else {
+        _fliPos = _fliNPos;
+      }
+
+      _clrFnd = true;
+      ind.ready();
+    }
+
+    void gpFlip() {
+      CrcLib::SetPwmOutput(_fliSrvPin, _fliPos);
+      if (_gp) {
+        if (!_fliTimeReset) {
+          fliTime.reset();
+          _fliTimeReset = true;
+        } else if (fliTime.singleState()) {
+          _fliRdy = true;
+        }
+      }
     }
 };
 
@@ -90,25 +227,43 @@ class GPGround {
 //=============================================================================================
 class GPElevator {
   public:
-    GPElevator(BUTTON offButton, BUTTON step1Button, BUTTON step2Button, BUTTON step3Button, BUTTON step4Button, BUTTON step5Button, BUTTON step6Button, BUTTON step7Button, int motorControlPin, uint8_t motorPin1, uint8_t motorPin2, int targetSpeed, int stepNumber,
-    int step1Position, int step2Position, int step3Position, int step4Position, int step5Position, int step6Position, int step7Position) :
-    _offButton(offButton), _s1Button(step1Button), _s2Button(step2Button), _s3Button(step3Button), _s4Button(step4Button), _s5Button(step5Button), _s6Button(step6Button), _s7Button(step7Button), _eleMCPin(motorControlPin), _eleMPin1(motorPin1), _eleMPin2(motorPin2), _eleTSpeed(targetSpeed), _stepNum(stepNumber),
-    spdTime(10), elevator(_eleMPin1, _eleMPin2)
+    struct config {
+      BUTTON offButton;
+      BUTTON step1Button;
+      BUTTON step2Button;
+      BUTTON step3Button;
+      BUTTON step4Button;
+      BUTTON step5Button;
+      BUTTON step6Button;
+      BUTTON step7Button;
+      int step1Position;
+      int step2Position;
+      int step3Position;
+      int step4Position;
+      int step5Position;
+      int step6Position;
+      int step7Position;
+      int motorControlPin;
+      int encoderPin1;
+      int encoderPin2;
+      int speed;
+      int accelerationGap;
+    };
+
+    GPElevator(config &conf) : _offButton(conf.offButton), _s1Button(conf.step1Button), _s2Button(conf.step2Button), _s3Button(conf.step3Button), _s4Button(conf.step4Button), _s5Button(conf.step5Button), _s6Button(conf.step6Button), _s7Button(conf.step7Button), _eleMCPin(conf.motorControlPin), _revSpd(conf.speed),
+      spdTime(conf.accelerationGap), elevator(conf.encoderPin1, conf.encoderPin2)
       {
-        _stepPos = new int[_stepNum];
-        _stepPos[0] = step1Position;
-        _stepPos[1] = step2Position;
-        _stepPos[2] = step3Position;
-        _stepPos[3] = step4Position;
-        _stepPos[4] = step5Position;
-        _stepPos[5] = step6Position;
-        _stepPos[6] = step7Position;
+        _stepPos[0] = conf.step1Position;
+        _stepPos[1] = conf.step2Position;
+        _stepPos[2] = conf.step3Position;
+        _stepPos[3] = conf.step4Position;
+        _stepPos[4] = conf.step5Position;
+        _stepPos[5] = conf.step6Position;
+        _stepPos[6] = conf.step7Position;
+
+        CrcLib::InitializePwmOutput(_eleMCPin);
       }
 
-    void Setup() {
-      CrcLib::InitializePwmOutput(_eleMCPin);
-      _plsPrChk = 15;
-    }
 
     void Update() {
       _curPos = elevator.read();
@@ -143,12 +298,8 @@ class GPElevator {
 
   private:
     const int _eleMCPin;
-    const uint8_t _eleMPin1;
-    const uint8_t _eleMPin2;
-    const int _eleTSpeed;
-    const int _spdCnst = 2;
-    const int _stepNum;
-    int *_stepPos;
+    const int _revSpd;
+    int _stepPos[7];
     Binding _offButton;
     Binding _s1Button;
     Binding _s2Button;
@@ -158,19 +309,15 @@ class GPElevator {
     Binding _s6Button;
     Binding _s7Button;
 
-    double _plsPrChk;
-
-    int _curPlsPrChk;
-    int _curTgtSpeed;
-    int _curSpeed;
-    int _staPos;
+    int _curPos;
+    int _step;
+    int _elvState;  // 0: Motor off, 1: Stay at position, 2: Moving
+    int _curRevSpd;
+    int _curSpd;
     int _lstPos;
     int _tarPos;
     int _posInt;
     int _expInt;
-    int _curPos;
-    int _step;
-    int _elvState;  // 0: Motor off, 1: Stay at position, 2: Moving
 
     Time spdTime;
     Encoder elevator;
@@ -178,14 +325,11 @@ class GPElevator {
 
     void setPos() {
       _tarPos = _stepPos[_step];
-      _staPos = _curPos;
 
-      if (_tarPos > _staPos) {
-        _curTgtSpeed = _eleTSpeed;
-        _curPlsPrChk = _plsPrChk;
-      } else if (_tarPos < _staPos) {
-        _curTgtSpeed = _eleTSpeed*(-1);
-        _curPlsPrChk = _plsPrChk*(-1);
+      if (_tarPos > _curPos) {
+        _curRevSpd = _revSpd;
+      } else if (_tarPos < _curPos) {
+        _curRevSpd = _revSpd*(-1);
       }
 
       _elvState = 2;
@@ -194,19 +338,19 @@ class GPElevator {
     int elvSpeed() {
       if (_elvState == 0) {
         if (_elvState == 0 && _curPos < _stepPos[1])
-        _curSpeed = 0;
+        _curSpd = 0;
         return;
       } else if (_elvState == 1) {
         _expInt = 0;
       } else if (_elvState == 2) {
-        _expInt = _curPlsPrChk;
+        _expInt = _curRevSpd;
       }
 
       _posInt = _curPos - _lstPos;
       if (_posInt < (_expInt - 1)) {
-        _curSpeed += 1;
+        _curSpd += 1;
       } else if (_posInt > (_expInt + 1)) {
-        _curSpeed -= 1;
+        _curSpd -= 1;
       }
 
       _lstPos = _curPos;
@@ -221,7 +365,7 @@ class GPElevator {
         elvSpeed();
       }
 
-      CrcLib::SetPwmOutput(_eleMCPin, _curSpeed);
+      CrcLib::SetPwmOutput(_eleMCPin, _curSpd);
     }
 };
 
@@ -234,7 +378,7 @@ class GPElevator {
 //=============================================================================================
 class GPGrabber {
   public:
-    struct config{
+    struct config {
       CrcUtility::BUTTON servoBinding; 
       CrcUtility::BUTTON wheelBinding; 
       int servo1Pin; 
@@ -249,8 +393,7 @@ class GPGrabber {
       int wheelSpeed;
     };
 
-    GPGrabber(GPGrabber::config &conf) :
-      _graSrvButton(conf.servoBinding), _graWhlButton(conf.wheelBinding), _srv1Pin(conf.servo1Pin), _srv2Pin(conf.servo2Pin), _whlPin(conf.wheelPin), _whlSpeed(conf.wheelSpeed)
+    GPGrabber(config &conf) : _graSrvButton(conf.servoBinding), _graWhlButton(conf.wheelBinding), _srv1Pin(conf.servo1Pin), _srv2Pin(conf.servo2Pin), _whlPin(conf.wheelPin), _whlSpeed(conf.wheelSpeed)
       {
         _srv1Pos[0] = conf.servo1Position_1;
         _srv1Pos[1] = conf.servo1Position_2;
@@ -258,13 +401,12 @@ class GPGrabber {
         _srv2Pos[0] = conf.servo2Position_1;
         _srv2Pos[1] = conf.servo2Position_2;
         _srv2Pos[2] = conf.servo2Position_3;
+
+        CrcLib::InitializePwmOutput(_srv1Pin);
+        CrcLib::InitializePwmOutput(_srv2Pin);
+        CrcLib::InitializePwmOutput(_whlPin);
       }
 
-    void Setup() {
-      CrcLib::InitializePwmOutput(_srv1Pin);
-      CrcLib::InitializePwmOutput(_srv2Pin);
-      CrcLib::InitializePwmOutput(_whlPin);
-    }
 
     void Update() {
       // GRABBER CLAW
@@ -280,7 +422,6 @@ class GPGrabber {
       }
       srvMove();
 
-      // GRABBER CONVEYOR
       if (_graWhlButton.isPressed()) {
         whlSpin(_whlSpeed);
       } else {
