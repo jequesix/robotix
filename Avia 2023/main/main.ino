@@ -31,10 +31,10 @@ void setup() {
   gpElvConf.offButton = BUTTON::ARROW_LEFT;
   gpElvConf.step1Button = BUTTON::COLORS_UP;  gpElvConf.step2Button = BUTTON::COLORS_RIGHT;  gpElvConf.step3Button = BUTTON::COLORS_DOWN;  gpElvConf.step4Button = BUTTON::COLORS_LEFT;
   gpElvConf.step5Button = BUTTON::ARROW_UP;   gpElvConf.step6Button = BUTTON::ARROW_RIGHT;   gpElvConf.step7Button = BUTTON::ARROW_DOWN;
-  gpElvConf.step1Position = 1000;              gpElvConf.step2Position = 2000;                 gpElvConf.step3Position = 3000;                gpElvConf.step4Position = 4000;                
-  gpElvConf.step5Position = 5000;              gpElvConf.step6Position = 6000;                 gpElvConf.step7Position = 9000;
+  gpElvConf.step1Position = 1000;             gpElvConf.step2Position = 2000;                gpElvConf.step3Position = 3000;               gpElvConf.step4Position = 4000;                
+  gpElvConf.step5Position = 5000;             gpElvConf.step6Position = 6000;                gpElvConf.step7Position = 9000;
   gpElvConf.motorControlPin = CRC_PWM_4;      gpElvConf.encoderPin1 = CRC_ENCO_A;            gpElvConf.encoderPin2 = CRC_ENCO_B;
-  gpElvConf.speed = 15;                       gpElvConf.accelerationGap = 1;
+  gpElvConf.speed = 15;                       gpElvConf.accelerationGap = 10;
   gpElv = new GPElevator(gpElvConf);
 
   GPGrabber::config gpGrbConf;

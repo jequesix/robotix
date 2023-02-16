@@ -252,8 +252,8 @@ class GPElevator {
       int accelerationGap;
     };
 
-    GPElevator(config &conf) : _offButton(conf.offButton), _s1Button(conf.step1Button), _s2Button(conf.step2Button), _s3Button(conf.step3Button), _s4Button(conf.step4Button), _s5Button(conf.step5Button), _s6Button(conf.step6Button), _s7Button(conf.step7Button), _eleMCPin(conf.motorControlPin), _revSpd(conf.speed),
-      spdTime(conf.accelerationGap), elevator(conf.encoderPin1, conf.encoderPin2), clbrTime(5000)
+    GPElevator(config &conf) : _offButton(conf.offButton), _s1Button(conf.step1Button), _s2Button(conf.step2Button), _s3Button(conf.step3Button), _s4Button(conf.step4Button), _s5Button(conf.step5Button), _s6Button(conf.step6Button), _s7Button(conf.step7Button), _eleMCPin(conf.motorControlPin), _revSpd(conf.speed), _accGap(conf.accelerationGap),
+      elevator(conf.encoderPin1, conf.encoderPin2), spdTime(conf.accelerationGap), rvsDclTime(20, conf.speed)
       {
         _stepPos[0] = conf.step1Position;
         _stepPos[1] = conf.step2Position;
@@ -265,6 +265,8 @@ class GPElevator {
 
         CrcLib::InitializePwmOutput(_eleMCPin);
         _elvState = 0;
+
+        _dclTime = _revSpd * _accGap;
       }
 
 
@@ -302,6 +304,8 @@ class GPElevator {
   private:
     const int _eleMCPin;
     const int _revSpd;
+    const int _accGap;
+    int _dclTime;
     int _stepPos[7];
     Binding _offButton;
     Binding _s1Button;
@@ -318,13 +322,15 @@ class GPElevator {
     int _elvState;  // 0: Motor off, 1: Stay at position, 2: Moving
     int _curRevSpd;
     int _curSpd;
+    int _spdIncr;
     int _lstPos;
     int _tarPos;
     int _posInt;
     int _expInt;
+    bool _rvsDclBln;
 
     Time spdTime;
-    Time clbrTime;
+    Time rvsDclTime;
     Encoder elevator;
 
 
@@ -333,8 +339,10 @@ class GPElevator {
 
       if (_tarPos >= _curPos) {
         _curRevSpd = _revSpd;
+        _spdIncr = 1;
       } else if (_tarPos < _curPos) {
         _curRevSpd = _revSpd*(-1);
+        _spdIncr = -1;
       }
 
       if (_elvState != 0) {
@@ -344,34 +352,50 @@ class GPElevator {
 
     void elvSpeed() {
       if (_elvState == 0) {
-        if (_elvState == 0)
+        if (_curPos == 0) {
+          _curSpd = 10;
+        } else {
           _curSpd = 0;
+        }
         return;
       } else if (_elvState == 1) {
         _expInt = 0;
       } else if (_elvState == 2) {
-        _expInt = _curRevSpd;
+        if (abs(_tarPos - _curPos) <= (_dclTime - _accGap)) {
+          _expInt -= _spdIncr;
+        } else {
+          _expInt = _curRevSpd;
+        }
       }
       
       _posInt = _curPos - _lstPos;
-      if (_posInt < (_expInt - 1)) {
-        _curSpd += 1;
-      } else if (_posInt > (_expInt + 1)) {
-        _curSpd -= 1;
+      if (_posInt <= (_expInt - 1)) {
+        _curSpd++;
+      } else if (_posInt >= (_expInt + 1)) {
+        _curSpd--;
+      }
+
+      if (_curSpd > 127) {
+        _curSpd = 127;
+      } else if (_curSpd < -128) {
+        _curSpd = -128;
       }
 
       _lstPos = _curPos;
     }
     
     void elvMove() {
-      if (_curPos <= (_tarPos + 200) && _curPos >= _tarPos) {
-        _elvState = 1;
-      } else {
-        setPos();
+      if (_elvState != 0) {
+        if (_curPos <= (_tarPos + 200) && _curPos >= _tarPos) {
+          _elvState = 1;
+        } else {
+          _elvState = 2;
+        }
       }
 
-      if (spdTime.singleState()) {
+      if (_spdIncr == -1 && !_rvsDclBln && rvsDclTime.cycleState() < _revSpd) {
         elvSpeed();
+        _rvsDclBln = true;
       }
       Serial.println(_curSpd);
       Serial.println(_curPos);
@@ -420,13 +444,10 @@ class GPGrabber {
 
     void Update() {
       // GRABBER CLAW
-      if (_graSrvButton.wasClicked())
-      {
-        if (_step < (_stepNum - 1)) 
-        {
+      if (_graSrvButton.wasClicked()) {
+        if (_step < (_stepNum - 1)) {
           _step++;
-        } else 
-        {
+        } else {
           _step = 0;
         }
       }
