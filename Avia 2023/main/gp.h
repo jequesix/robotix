@@ -17,26 +17,41 @@ class Indicator {
         Adafruit_NeoPixel strip(_ldCnt, stripPin, NEO_GRB + NEO_KHZ800);
         strip.begin();
 
-        yellow = strip.Color(255, 255, 0);
-        red = strip.Color(255, 0, 0);
-        green = strip.Color(0, 255, 0);
-        blue = strip.Color(0, 0, 255);
+        _yellow = strip.Color(255, 255, 0);
+        _red = strip.Color(255, 0, 0);
+        _green = strip.Color(0, 255, 0);
+        _blue = strip.Color(0, 0, 255);
+        _purple = strip.Color(185, 0, 255);
       }
 
     void teamColor() {
       if (_tmClr == 0) {
-        strip.fill(blue, 0);
+        strip.fill(_blue, 0);
       } else if (_tmClr == 1) {
-        strip.fill(yellow, 0);
+        strip.fill(_yellow, 0);
       }
     }
 
-    void working() {
-      strip.fill(red, 0);
+    void yellow() {
+      strip.fill(_yellow, 0);
+      strip.show();
     }
 
-    void ready() {
-      strip.fill(green, 0);
+    void red() {
+      strip.fill(_red, 0, 210);
+      strip.show();
+    }
+
+    void green() {
+      strip.fill(_green, 0);
+    }
+
+    void blue() {
+      strip.fill(_blue, 0);
+    }
+
+    void purple() {
+      strip.fill(_purple, 0);
     }
 
     void color(byte r, byte g, byte b) {
@@ -47,14 +62,15 @@ class Indicator {
   private:
     const int _strpPin;
     const int _tmClr;
-    const int _ldCnt = 50;
+    const int _ldCnt = 210;
 
     Adafruit_NeoPixel strip;
 
-    int yellow;
-    int red;
-    int green;
-    int blue;
+    uint32_t _yellow;
+    uint32_t _red;
+    uint32_t _green;
+    uint32_t _blue;
+    uint32_t _purple;
 };
 
 
@@ -92,26 +108,27 @@ class GPGround {
         CrcLib::InitializePwmOutput(_lftCptMPin);
         CrcLib::InitializePwmOutput(_rgtCptMPin);
         CrcLib::InitializePwmOutput(_fliSrvPin, 500, 2500);
-        CrcLib::SetPwmOutput(_fliSrvPin, _fliNPos);
+        _fliPos = _fliNPos;
+                CrcLib::SetPwmOutput(_fliSrvPin, _fliPos);
       }
 
     void Update() {
       _capBindPos = CrcLib::ReadAnalogChannel(_capBind);
 
-      if (_capBindPos >= -118 && _capBindPos < 5) {
-        _capSpeed = _capMSpeed;
-      } else if (_capBindPos >= 5) {
+      if (_capBindPos >= -127 && _capBindPos < 127) {
         _capSpeed = _capMSSpeed;
+      } else if (_capBindPos >= 127) {
+        _capSpeed = _capMSpeed;
       } else {
         _capSpeed = 0;
       }
       gpCapture();
 
-      if (_fliSBind.isPressed()) {
+      if (_fliSBind.wasClicked()) {
         _fliPos = _fliSPos;
-      } else if (_fliFBind.isPressed()) {
+      } else if (_fliFBind.wasClicked()) {
         _fliPos = _fliFPos;
-      } else if (_fliNBind.isPressed()) {
+      } else if (_fliNBind.wasClicked()) {
         _fliPos = _fliNPos;
       }
       gpFlip();
@@ -120,7 +137,7 @@ class GPGround {
         gpColor();
       }
 
-      showColors();      
+      showColors();
     }
 
   private:
@@ -214,9 +231,7 @@ class GPGround {
     }
 
     void showColors() {
-      if (_isGp) {
-        ind.working();
-      }
+      ind.red();
     }
 };
 
@@ -253,7 +268,7 @@ class GPElevator {
     };
 
     GPElevator(config &conf) : _offButton(conf.offButton), _s1Button(conf.step1Button), _s2Button(conf.step2Button), _s3Button(conf.step3Button), _s4Button(conf.step4Button), _s5Button(conf.step5Button), _s6Button(conf.step6Button), _s7Button(conf.step7Button), _eleMCPin(conf.motorControlPin), _revSpd(conf.speed), _accGap(conf.accelerationGap),
-      elevator(conf.encoderPin1, conf.encoderPin2), spdTime(conf.accelerationGap), rvsDclTime(20, conf.speed)
+      elevator(conf.encoderPin1, conf.encoderPin2), spdTime(conf.accelerationGap), rvsDclTime(20, (conf.speed + 1))
       {
         _stepPos[0] = conf.step1Position;
         _stepPos[1] = conf.step2Position;
@@ -274,27 +289,28 @@ class GPElevator {
       _curPos = elevator.read();
 
       if(_offButton.wasClicked()) {
-        _elvState = 0;
-      } else if (_s1Button.wasClicked()) {
         _step = 0;
         setPos();
-      } else if (_s2Button.wasClicked()) {
+      } else if (_s1Button.wasClicked()) {
         _step = 1;
         setPos();
-      } else if (_s3Button.wasClicked()) {
+      } else if (_s2Button.wasClicked()) {
         _step = 2;
         setPos();
-      } else if (_s4Button.wasClicked()) {
+      } else if (_s3Button.wasClicked()) {
         _step = 3;
         setPos();
-      } else if (_s5Button.wasClicked()) {
+      } else if (_s4Button.wasClicked()) {
         _step = 4;
         setPos();
-      } else if (_s6Button.wasClicked()) {
+      } else if (_s5Button.wasClicked()) {
         _step = 5;
         setPos();
-      } else if (_s7Button.wasClicked()) {
+      } else if (_s6Button.wasClicked()) {
         _step = 6;
+        setPos();
+      } else if (_s7Button.wasClicked()) {
+        _step = 7;
         setPos();
       }
 
@@ -317,17 +333,16 @@ class GPElevator {
     Binding _s7Button;
 
     int _curPos;
-    int _step;
-    int _lstStep;
     int _elvState;  // 0: Motor off, 1: Stay at position, 2: Moving
     int _curRevSpd;
+    int _step;
     int _curSpd;
     int _spdIncr;
     int _lstPos;
     int _tarPos;
     int _posInt;
     int _expInt;
-    bool _rvsDclBln;
+    bool _rvsDclBln = false;
 
     Time spdTime;
     Time rvsDclTime;
@@ -335,24 +350,26 @@ class GPElevator {
 
 
     void setPos() {
-      _tarPos = _stepPos[_step];
-
-      if (_tarPos >= _curPos) {
-        _curRevSpd = _revSpd;
-        _spdIncr = 1;
-      } else if (_tarPos < _curPos) {
-        _curRevSpd = _revSpd*(-1);
-        _spdIncr = -1;
-      }
-
-      if (_elvState != 0) {
+      if (_step == 0) {
+        _elvState = 0;
+        return;
+      } else {
+        _tarPos = _stepPos[_step - 1];
         _elvState = 2;
+
+        if (_tarPos >= _curPos) {
+          _curRevSpd = _revSpd;
+          _spdIncr = 1;
+        } else if (_tarPos < _curPos) {
+          _curRevSpd = _revSpd*(-1);
+          _spdIncr = -1;
+        }
       }
     }
 
     void elvSpeed() {
       if (_elvState == 0) {
-        if (_curPos == 0) {
+        if (_curPos <= 100) {
           _curSpd = 10;
         } else {
           _curSpd = 0;
@@ -361,7 +378,7 @@ class GPElevator {
       } else if (_elvState == 1) {
         _expInt = 0;
       } else if (_elvState == 2) {
-        if (abs(_tarPos - _curPos) <= (_dclTime - _accGap)) {
+        if (abs(_tarPos - _curPos) <= (_dclTime * 2)) {
           _expInt -= _spdIncr;
         } else {
           _expInt = _curRevSpd;
@@ -386,19 +403,23 @@ class GPElevator {
     
     void elvMove() {
       if (_elvState != 0) {
-        if (_curPos <= (_tarPos + 200) && _curPos >= _tarPos) {
+        if (_curPos <= (_tarPos + 500) && _curPos >= _tarPos) {
           _elvState = 1;
         } else {
-          _elvState = 2;
+          setPos();
         }
       }
 
-      if (_spdIncr == -1 && !_rvsDclBln && rvsDclTime.cycleState() < _revSpd) {
+      if (_spdIncr == -1 && !_rvsDclBln) {
+        if (rvsDclTime.cycleState() < (_revSpd + 1)) {
+          elvSpeed();
+        } else {
+          _rvsDclBln = true;
+        }
+      } else if (spdTime.singleState()) {
         elvSpeed();
-        _rvsDclBln = true;
       }
-      Serial.println(_curSpd);
-      Serial.println(_curPos);
+
       CrcLib::SetPwmOutput(_eleMCPin, _curSpd);
     }
 };
@@ -429,29 +450,32 @@ class GPGrabber {
 
     GPGrabber(config &conf) : _graSrvButton(conf.servoBinding), _graWhlButton(conf.wheelBinding), _srv1Pin(conf.servo1Pin), _srv2Pin(conf.servo2Pin), _whlPin(conf.wheelPin), _whlSpeed(conf.wheelSpeed)
       {
-        _srv1Pos[0] = conf.servo1Position_1;
-        _srv1Pos[1] = conf.servo1Position_2;
-        _srv1Pos[2] = conf.servo1Position_3;
-        _srv2Pos[0] = conf.servo2Position_1;
-        _srv2Pos[1] = conf.servo2Position_2;
-        _srv2Pos[2] = conf.servo2Position_3;
+        _srv1Pos[0] = conf.servo1Position_2;
+        _srv1Pos[1] = conf.servo1Position_3;
+        _srv2Pos[0] = conf.servo2Position_2;
+        _srv2Pos[1] = conf.servo2Position_3;
 
-        CrcLib::InitializePwmOutput(_srv1Pin);
-        CrcLib::InitializePwmOutput(_srv2Pin);
+        CrcLib::InitializePwmOutput(_srv1Pin, 500, 2500);
+        CrcLib::InitializePwmOutput(_srv2Pin, 500, 2500);
         CrcLib::InitializePwmOutput(_whlPin);
+        
+        CrcLib::SetPwmOutput(_srv1Pin, conf.servo1Position_1);
+        CrcLib::SetPwmOutput(_srv2Pin, conf.servo2Position_1);
+        
       }
 
 
     void Update() {
-      // GRABBER CLAW
       if (_graSrvButton.wasClicked()) {
         if (_step < (_stepNum - 1)) {
           _step++;
         } else {
           _step = 0;
         }
+        srvMove();
       }
-      srvMove();
+
+
 
       if (_graWhlButton.isPressed()) {
         whlSpin(_whlSpeed);
@@ -463,14 +487,14 @@ class GPGrabber {
   private:
     Binding _graWhlButton;
     const int _srv1Pin;
-    int _srv1Pos[3];
+    int _srv1Pos[2];
     const int _srv2Pin;
-    int _srv2Pos[3];
+    int _srv2Pos[2];
     const int _whlPin;
     const int _whlSpeed;
     Binding _graSrvButton;
     
-    const int _stepNum = 3;
+    const int _stepNum = 2;
     int _step = 0;
     bool _isWhlSpin = false;
 
