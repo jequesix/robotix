@@ -84,6 +84,7 @@ class GPGround {
   public:
     struct config {
       ANALOG captureBinding;
+      ANALOG captureReverseBinding;
       int leftCaptureMotorPin;
       int rightCaptureMotorPin;
       int captureMotorsSpeed;
@@ -102,23 +103,28 @@ class GPGround {
       int elevatorLaserSensorPin;
     };
 
-    GPGround(config &conf) : _capBind(conf.captureBinding), _lftCptMPin(conf.leftCaptureMotorPin), _rgtCptMPin(conf.rightCaptureMotorPin), _capMSpeed(conf.captureMotorsSpeed), _capMSSpeed(conf.captureMotorsSlowSpeed), _clrSPin(conf.colorSensorPin), _tmClr(conf.teamColor), _capLSPin(conf.captureLaserSensorPin), _fliLSPin(conf.flipperLaserSensorPin), _fliNBind(conf.flipperNeutralBinding), _fliFBind(conf.flipperFlipBinding), _fliSBind(conf.flipperSkipBinding), _fliSrvPin(conf.flipperServoPin), _fliNPos(conf.flipperNeutralPosition), _fliFPos(conf.flipperFlipPosition), _fliSPos(conf.flipperSkipPosition), _elvLSPin(conf.elevatorLaserSensorPin),
+    GPGround(config &conf) : _capBind(conf.captureBinding), _lftCptMPin(conf.leftCaptureMotorPin), _rgtCptMPin(conf.rightCaptureMotorPin), _capMSpeed(conf.captureMotorsSpeed), _capMSSpeed(conf.captureMotorsSlowSpeed), _capRBind(conf.captureReverseBinding), _clrSPin(conf.colorSensorPin), _tmClr(conf.teamColor), _capLSPin(conf.captureLaserSensorPin), _fliLSPin(conf.flipperLaserSensorPin), _fliNBind(conf.flipperNeutralBinding), _fliFBind(conf.flipperFlipBinding), _fliSBind(conf.flipperSkipBinding), _fliSrvPin(conf.flipperServoPin), _fliNPos(conf.flipperNeutralPosition), _fliFPos(conf.flipperFlipPosition), _fliSPos(conf.flipperSkipPosition), _elvLSPin(conf.elevatorLaserSensorPin),
       fliTime(1000), ind(CRC_PWM_12, conf.teamColor)
       {
         CrcLib::InitializePwmOutput(_lftCptMPin);
         CrcLib::InitializePwmOutput(_rgtCptMPin);
         CrcLib::InitializePwmOutput(_fliSrvPin, 500, 2500);
+        CrcLib::InitializePwmOutput(CRC_PWM_12);
         _fliPos = _fliNPos;
-                CrcLib::SetPwmOutput(_fliSrvPin, _fliPos);
+        CrcLib::SetPwmOutput(_fliSrvPin, _fliPos);
+        _capRvsSpd = _capMSSpeed*(-1);
       }
 
     void Update() {
       _capBindPos = CrcLib::ReadAnalogChannel(_capBind);
+      _capRBindPos = CrcLib::ReadAnalogChannel(_capRBind);
 
       if (_capBindPos >= -127 && _capBindPos < 127) {
         _capSpeed = _capMSSpeed;
       } else if (_capBindPos >= 127) {
         _capSpeed = _capMSpeed;
+      } else if (_capRBindPos >= -127) {
+        _capSpeed = _capRvsSpd;
       } else {
         _capSpeed = 0;
       }
@@ -143,13 +149,15 @@ class GPGround {
   private:
     Indicator ind;
     // Capture component
-    const CrcUtility::ANALOG _capBind;
+    const ANALOG _capBind;
+    const ANALOG _capRBind;
     const int _lftCptMPin;
     const int _rgtCptMPin;
     const int _clrSPin;
     const int _capLSPin;
     const int _capMSpeed;
     const int _capMSSpeed;
+    int _capRvsSpd;
     const int _tmClr;
     const int _blueClrVal = 40;
     const int _yellowClrVal = 110;
@@ -170,6 +178,7 @@ class GPGround {
 
     // Dynamic
     int _capBindPos;
+    int _capRBindPos;
     int _capSpeed;
     bool _clrFnd;
     int _clrVal;
@@ -245,6 +254,9 @@ class GPGround {
 class GPElevator {
   public:
     struct config {
+      BUTTON manualToggle;
+      ANALOG manualControl;
+      BUTTON resetButton;
       BUTTON offButton;
       BUTTON step1Button;
       BUTTON step2Button;
@@ -267,7 +279,7 @@ class GPElevator {
       int accelerationGap;
     };
 
-    GPElevator(config &conf) : _offButton(conf.offButton), _s1Button(conf.step1Button), _s2Button(conf.step2Button), _s3Button(conf.step3Button), _s4Button(conf.step4Button), _s5Button(conf.step5Button), _s6Button(conf.step6Button), _s7Button(conf.step7Button), _eleMCPin(conf.motorControlPin), _revSpd(conf.speed), _accGap(conf.accelerationGap),
+    GPElevator(config &conf) : _manTgl(conf.manualToggle), _manCtrl(conf.manualControl), _rstButton(conf.resetButton), _offButton(conf.offButton), _s1Button(conf.step1Button), _s2Button(conf.step2Button), _s3Button(conf.step3Button), _s4Button(conf.step4Button), _s5Button(conf.step5Button), _s6Button(conf.step6Button), _s7Button(conf.step7Button), _eleMCPin(conf.motorControlPin), _revSpd(conf.speed), _accGap(conf.accelerationGap),
       elevator(conf.encoderPin1, conf.encoderPin2), spdTime(conf.accelerationGap), rvsDclTime(20, (conf.speed + 1))
       {
         _stepPos[0] = conf.step1Position;
@@ -287,10 +299,12 @@ class GPElevator {
 
     void Update() {
       _curPos = elevator.read();
-
-      if(_offButton.wasClicked()) {
+      
+      if (_offButton.wasClicked()) {
         _step = 0;
         setPos();
+      } else if (_manTgl.wasClicked()) {
+        _elvState = 3;
       } else if (_s1Button.wasClicked()) {
         _step = 1;
         setPos();
@@ -323,6 +337,10 @@ class GPElevator {
     const int _accGap;
     int _dclTime;
     int _stepPos[7];
+
+    const ANALOG _manCtrl;
+    Binding _manTgl;
+    Binding _rstButton;
     Binding _offButton;
     Binding _s1Button;
     Binding _s2Button;
@@ -343,6 +361,8 @@ class GPElevator {
     int _posInt;
     int _expInt;
     bool _rvsDclBln = false;
+    int _manCtrlPos;
+    int _manCtrlMap;
 
     Time spdTime;
     Time rvsDclTime;
@@ -369,13 +389,18 @@ class GPElevator {
 
     void elvSpeed() {
       if (_elvState == 0) {
-        if (_curPos <= 100) {
-          _curSpd = 10;
-        } else {
-          _curSpd = 0;
+         _curSpd = 0;
+        if (_rstButton.wasClicked()) {
+          elevator.write(0);
         }
         return;
-      } else if (_elvState == 1) {
+      } else if (_elvState == 3) {
+        _manCtrlPos = CrcLib::ReadAnalogChannel(_manCtrl);
+        _manCtrlMap = map(_manCtrlPos, -128, 127, _revSpd*(-1), _revSpd);
+        _expInt =_manCtrlMap;
+      }
+      
+      else if (_elvState == 1) {
         _expInt = 0;
       } else if (_elvState == 2) {
         if (abs(_tarPos - _curPos) <= (_dclTime * 2)) {
@@ -402,8 +427,8 @@ class GPElevator {
     }
     
     void elvMove() {
-      if (_elvState != 0) {
-        if (_curPos <= (_tarPos + 500) && _curPos >= _tarPos) {
+      if (_elvState == 1 || _elvState == 2) {
+        if (_curPos <= (_tarPos + 1000) && _curPos >= _tarPos) {
           _elvState = 1;
         } else {
           setPos();
@@ -419,7 +444,7 @@ class GPElevator {
       } else if (spdTime.singleState()) {
         elvSpeed();
       }
-
+      Serial.println(_curPos);
       CrcLib::SetPwmOutput(_eleMCPin, _curSpd);
     }
 };
