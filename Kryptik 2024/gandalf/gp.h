@@ -77,7 +77,7 @@ class GPElevator {
         return;
       } else if (_elvOn) {
         _manCtrlPos = CrcLib::ReadAnalogChannel(_manCtrl);
-        _manCtrlMap = map(_manCtrlPos, -128, 127, _revSpd, _revSpd*(-1));
+        _manCtrlMap = map(_manCtrlPos, -128, 127, _revSpd*(-1), _revSpd);
 
         if (_manCtrlMap < -1 || _manCtrlMap > -1) {
           _expInt =_manCtrlMap;
@@ -87,16 +87,18 @@ class GPElevator {
       }
       
       _posInt = _curPos - _lstPos;
-      if (_posInt <= (_expInt - 1)) {
+      if (_posInt <= (_expInt)) {
+        Serial.println("plussed");
         _curSpd++;
-      } else if (_posInt >= (_expInt + 1)) {
+      } else if (_posInt >= (_expInt)) {
         _curSpd--;
       }
+      Serial.println(_expInt);
 
-      if (_curSpd > 127) {
-        _curSpd = 127;
-      } else if (_curSpd < -128) {
-        _curSpd = -128;
+      if (_curSpd > 10) {
+        _curSpd = 10;
+      } else if (_curSpd < -11) {
+        _curSpd = -11;
       }
 
       _lstPos = _curPos;
@@ -111,7 +113,6 @@ class GPElevator {
     }
 };
 
-
 class RotateArm {
   public:
     struct config {
@@ -124,11 +125,12 @@ class RotateArm {
     RotateArm(config &conf) : _servo1Pin(conf.servo1Pin), _servo2Pin(conf.servo2Pin), _rotateMotorPin(conf.rotateMotorPin), _raiseArmButton(conf.raiseArmButton) 
     {
       CrcLib::InitializePwmOutput(_rotateMotorPin);
+      CrcLib::InitializePwmOutput(_servo1Pin);
+      CrcLib::InitializePwmOutput(_servo1Pin);
     }
 
     void Update() {
-      CrcLib::SetPwmOutput(_servo1Pin, CrcLib::ReadAnalogChannel(_raiseArmButton));
-      CrcLib::SetPwmOutput(_servo2Pin, CrcLib::ReadAnalogChannel(_raiseArmButton));
+      
     }
   
   private:
@@ -136,6 +138,6 @@ class RotateArm {
     byte _servo2Pin;
     byte _rotateMotorPin;
     ANALOG _raiseArmButton;
+
     
-    char _servoPositionMapped;
 };

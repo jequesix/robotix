@@ -3,7 +3,6 @@
 
 GPElevator *gpElv;
 GPElevator *gpElv2;
-RotateArm *rttArm;
 
 void setup() {
   CrcLib::Initialize();
@@ -15,15 +14,10 @@ void setup() {
   gpElv = new GPElevator(gpElvConf);
 
   GPElevator::config gpElvConf2;
-  gpElvConf.manualControl = ANALOG::JOYSTICK1_Y;  gpElvConf.resetButton = BUTTON::L1;  gpElvConf.offButton = BUTTON::HATL;                             
-  gpElvConf.motorControlPin = CRC_PWM_2;          gpElvConf.encoderPin1 = CRC_SERIAL_TXD1;    gpElvConf.encoderPin2 = CRC_SERIAL_RXD1;
-  gpElvConf.speed = 15;                           gpElvConf.accelerationGap = 10;
+  gpElvConf2.manualControl = ANALOG::JOYSTICK1_Y;  gpElvConf2.resetButton = BUTTON::L1;  gpElvConf2.offButton = BUTTON::HATL;                             
+  gpElvConf2.motorControlPin = CRC_PWM_2;          gpElvConf2.encoderPin1 = CRC_I2C_SDA;  gpElvConf2.encoderPin2 = CRC_I2C_SCL;
+  gpElvConf2.speed = 15;                           gpElvConf2.accelerationGap = 10;
   gpElv2 = new GPElevator(gpElvConf2);
-
-  RotateArm::config rotateArmConf;
-  rotateArmConf.rotateMotorPin = CRC_PWM_12;   rotateArmConf.servo1Pin = CRC_PWM_3;  rotateArmConf.servo2Pin = CRC_PWM_4;
-  rotateArmConf.raiseArmButton = ANALOG::JOYSTICK2_X;
-  rttArm = new RotateArm(rotateArmConf);
   
   Serial.begin(2000000);
 }
@@ -33,7 +27,5 @@ void loop() {
 
   if (CrcLib::IsCommValid()) {
     gpElv->Update();
-    rttArm->Update();
-    
   }
 }
