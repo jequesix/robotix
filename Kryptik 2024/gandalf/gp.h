@@ -18,10 +18,11 @@ class GPElevator {
       int encoderPin2;
       int speed;
       int accelerationGap;
+      byte spdMultiplier;
     };
 
     GPElevator(config &conf) : _manCtrl(conf.manualControl), _rstButton(conf.resetButton), _offButton(conf.offButton), _eleMCPin(conf.motorControlPin), _revSpd(conf.speed), _accGap(conf.accelerationGap),
-      elevator(conf.encoderPin1, conf.encoderPin2), spdTime(conf.accelerationGap), rvsDclTime(20, (conf.speed + 1))
+      elevator(conf.encoderPin1, conf.encoderPin2), spdTime(conf.accelerationGap), rvsDclTime(20, (conf.speed + 1)), _spdMultiplier(conf.spdMultiplier)
       {
         CrcLib::InitializePwmOutput(_eleMCPin);
         _elvOn = false;
@@ -64,6 +65,8 @@ class GPElevator {
     int _manCtrlPos;
     int _manCtrlMap;
 
+    byte _spdMultiplier = 1;
+
     Time spdTime;
     Time rvsDclTime;
     Encoder elevator;
@@ -87,18 +90,19 @@ class GPElevator {
       }
       
       _posInt = _curPos - _lstPos;
-      if (_posInt <= (_expInt)) {
-        Serial.println("plussed");
-        _curSpd++;
-      } else if (_posInt >= (_expInt)) {
-        _curSpd--;
+      if (_posInt < (_expInt)) {
+        // Serial.print(_posInt);
+        // Serial.print(" ");
+        // Serial.println(_curSpd);
+        _curSpd -= _spdMultiplier;
+      } else if (_posInt > (_expInt)) {
+        _curSpd += _spdMultiplier;
       }
-      Serial.println(_expInt);
 
-      if (_curSpd > 10) {
-        _curSpd = 10;
-      } else if (_curSpd < -11) {
-        _curSpd = -11;
+      if (_curSpd > 50) {
+        _curSpd = 50;
+      } else if (_curSpd < -50) {
+        _curSpd = -50;
       }
 
       _lstPos = _curPos;
