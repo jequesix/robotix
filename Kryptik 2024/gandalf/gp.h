@@ -18,14 +18,14 @@ class GPElevator {
       int encoderPin2;
       int speed;
       int accelerationGap;
-      byte spdMultiplier;
+      int8_t spdMultiplier;
     };
 
     GPElevator(config &conf) : _manCtrl(conf.manualControl), _rstButton(conf.resetButton), _offButton(conf.offButton), _eleMCPin(conf.motorControlPin), _revSpd(conf.speed), _accGap(conf.accelerationGap),
       elevator(conf.encoderPin1, conf.encoderPin2), spdTime(conf.accelerationGap), rvsDclTime(20, (conf.speed + 1)), _spdMultiplier(conf.spdMultiplier)
       {
         CrcLib::InitializePwmOutput(_eleMCPin);
-        _elvOn = false;
+        _elvOn = true;
 
         _dclTime = _revSpd * _accGap;
       }
@@ -65,7 +65,7 @@ class GPElevator {
     int _manCtrlPos;
     int _manCtrlMap;
 
-    byte _spdMultiplier = 1;
+    int8_t _spdMultiplier = 1;
 
     Time spdTime;
     Time rvsDclTime;
@@ -79,24 +79,29 @@ class GPElevator {
         }
         return;
       } else if (_elvOn) {
+        /*
         _manCtrlPos = CrcLib::ReadAnalogChannel(_manCtrl);
         _manCtrlMap = map(_manCtrlPos, -128, 127, _revSpd*(-1), _revSpd);
-
+        
         if (_manCtrlMap < -1 || _manCtrlMap > -1) {
           _expInt =_manCtrlMap;
         } else {
           _expInt = 0;
         }
+        */
+
+        Serial.println(-_spdMultiplier);
+        _expInt = -_spdMultiplier;
       }
       
       _posInt = _curPos - _lstPos;
       if (_posInt < (_expInt)) {
         // Serial.print(_posInt);
-        // Serial.print(" ");
-        // Serial.println(_curSpd);
-        _curSpd -= _spdMultiplier;
+        Serial.print("Speed: ");
+        Serial.println(_curSpd);
+        _curSpd--; // _spdMultiplier;
       } else if (_posInt > (_expInt)) {
-        _curSpd += _spdMultiplier;
+        _curSpd++; // _spdMultiplier;
       }
 
       if (_curSpd > 50) {

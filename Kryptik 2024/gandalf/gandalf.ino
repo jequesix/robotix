@@ -22,11 +22,17 @@ void setup() {
   Serial.begin(2000000);
 }
 
+bool started = false;
 void loop() {
   CrcLib::Update();
 
-  if (CrcLib::IsCommValid()) {
-    gpElv->Update();
-    // gpElv2->Update();
+  if (!started) {
+    delay(3000);
+    started = true;
   }
+
+  //if (CrcLib::IsCommValid()) {
+    gpElv->Update();
+    gpElv2->Update();
+  // }
 }
